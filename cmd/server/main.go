@@ -9,7 +9,7 @@ import (
 	"github.com/isa0-gh/reader/internal/config"
 	"github.com/isa0-gh/reader/internal/database"
 	"github.com/isa0-gh/reader/internal/handler"
-	"github.com/isa0-gh/reader/internal/middleware"
+	appMiddleware "github.com/isa0-gh/reader/internal/middleware"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
 	"github.com/isa0-gh/reader/internal/service"
@@ -47,7 +47,7 @@ func main() {
 
 			// Protected routes
 			r.Group(func(r chi.Router) {
-				r.Use(middleware.JWTMiddleware(userRepo))
+				r.Use(appMiddleware.JWTMiddleware(userRepo))
 				r.Get("/", userHandler.List)
 				r.Get("/{id}", userHandler.Get)
 			})
