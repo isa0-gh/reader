@@ -2,13 +2,21 @@ package service
 
 import (
 	"context"
+	"errors"
+	"os"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/isa0-gh/reader/internal/middleware"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService interface {
-	RegisterUser(ctx context.Context, user *model.User) error
+	RegisterUser(ctx context.Context, email, password, name string) (*model.User, error)
+	Login(ctx context.Context, email, password string) (string, *model.User, error)
 	GetUser(ctx context.Context, id uint) (*model.User, error)
 	ListUsers(ctx context.Context) ([]model.User, error)
 }
@@ -21,9 +29,64 @@ func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{repo: repo}
 }
 
-func (s *userService) RegisterUser(ctx context.Context, user *model.User) error {
-	// Add business logic here (e.g., validation, password hashing)
-	return s.repo.Create(ctx, user)
+func (s *userService) RegisterUser(ctx context.Context, email, password, name string) (*model.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &model.User{
+		Email:        email,
+		PasswordHash: string(hashedPassword),
+		Name:         name,
+		JwtID:        uuid.New().String(),
+	}
+
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *userService) Login(ctx context.Context, email, password string) (string, *model.User, error) {
+	user, err := s.repo.GetByEmail(ctx, email)
+	if err != nil {
+		return "", nil, errors.New("invalid credentials")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		return "", nil, errors.New("invalid credentials")
+	}
+
+	// Update JwtID on login for revocation logic
+	user.JwtID = uuid.New().String()
+	if err := s.repo.Update(ctx, user); err != nil {
+		return "", nil, err
+	}
+
+	// Generate JWT
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "default_secret_change_me"
+	}
+
+	claims := &middleware.Claims{
+		UserID: user.ID,
+		JwtID:  user.JwtID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return tokenString, user, nil
 }
 
 func (s *userService) GetUser(ctx context.Context, id uint) (*model.User, error) {

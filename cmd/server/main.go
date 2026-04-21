@@ -54,7 +54,8 @@ func main() {
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/users", func(r chi.Router) {
-			r.Post("/", userHandler.Register)
+			r.Post("/register", userHandler.Register)
+			r.Post("/login", userHandler.Login)
 
 			// Protected routes
 			r.Group(func(r chi.Router) {
