@@ -9,7 +9,7 @@
   let user: any = null;
   let token = '';
 
-  const API_URL = 'http://localhost:8080/api/v1';
+  const API_URL = '/api/v1';
 
   onMount(() => {
     const savedToken = localStorage.getItem('token');

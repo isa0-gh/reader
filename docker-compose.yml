@@ -46,5 +46,16 @@ services:
     ports:
       - "${PORT:-8080}:8080"
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: reader-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
