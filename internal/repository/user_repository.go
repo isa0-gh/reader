@@ -14,6 +14,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id uint) error
 	List(ctx context.Context) ([]model.User, error)
+	Count(ctx context.Context) (int64, error)
 }
 
 type userRepository struct {
@@ -58,4 +59,9 @@ func (r *userRepository) List(ctx context.Context) ([]model.User, error) {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *userRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	return count, r.db.WithContext(ctx).Model(&model.User{}).Count(&count).Error
 }
