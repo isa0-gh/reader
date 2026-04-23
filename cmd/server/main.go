@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -40,6 +41,11 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userSvc)
+
+	// Seed first admin if no users exist
+	if err := userSvc.SeedAdmin(context.Background()); err != nil {
+		log.Fatalf("could not seed admin: %v", err)
+	}
 
 	seriesRepo := repository.NewSeriesRepository(db)
 	seriesSvc := service.NewSeriesService(seriesRepo)
