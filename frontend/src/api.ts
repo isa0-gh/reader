@@ -24,6 +24,7 @@ export const api = {
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
 
+  listSeries: () => request<Series[]>("/series"),
   getSeries: (id: number) => request<Series>(`/series/${id}`),
   getChapter: (id: number) => request<Chapter>(`/chapters/${id}`),
 
