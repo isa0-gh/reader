@@ -2,22 +2,16 @@
 FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /app
-
-# Install dependencies
-COPY package.json bun.lock ./
+COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
-
-# Copy source code and build
 COPY . .
 RUN bun run build
 
 # Production Stage
 FROM nginx:alpine
 
-# Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Add nginx config with proxy for /api
 RUN echo 'server { \
     listen 80; \
     location / { \
@@ -34,5 +28,4 @@ RUN echo 'server { \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
