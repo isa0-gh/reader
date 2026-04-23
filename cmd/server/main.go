@@ -58,16 +58,17 @@ func main() {
 
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Route("/users", func(r chi.Router) {
+		// Auth
+		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", userHandler.Register)
 			r.Post("/login", userHandler.Login)
+		})
 
-			// Protected routes
-			r.Group(func(r chi.Router) {
-				r.Use(appMiddleware.JWTMiddleware(userRepo))
-				r.Get("/", userHandler.List)
-				r.Get("/{id}", userHandler.Get)
-			})
+		// Users (protected)
+		r.Route("/users", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Get("/", userHandler.List)
+			r.Get("/{id}", userHandler.Get)
 		})
 	})
 
