@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
 )
 
@@ -65,6 +66,20 @@ func JWTMiddleware(userRepo repository.UserRepository) func(http.Handler) http.H
 
 			ctx := context.WithValue(r.Context(), UserContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequirePermission middleware checks if the authenticated user has the given permission.
+func RequirePermission(perm string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := r.Context().Value(UserContextKey).(*model.User)
+			if !ok || !user.HasPermission(perm) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 }
