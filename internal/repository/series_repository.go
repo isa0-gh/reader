@@ -10,6 +10,7 @@ import (
 type SeriesRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Series, error)
 	Create(ctx context.Context, s *model.Series) error
+	List(ctx context.Context) ([]model.Series, error)
 }
 
 type seriesRepository struct{ db *gorm.DB }
@@ -28,4 +29,12 @@ func (r *seriesRepository) GetByID(ctx context.Context, id uint) (*model.Series,
 
 func (r *seriesRepository) Create(ctx context.Context, s *model.Series) error {
 	return r.db.WithContext(ctx).Create(s).Error
+}
+
+func (r *seriesRepository) List(ctx context.Context) ([]model.Series, error) {
+	var list []model.Series
+	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
 }
