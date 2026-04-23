@@ -19,6 +19,7 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (string, *model.User, error)
 	GetUser(ctx context.Context, id uint) (*model.User, error)
 	ListUsers(ctx context.Context) ([]model.User, error)
+	SeedAdmin(ctx context.Context) error
 }
 
 type userService struct {
@@ -95,4 +96,24 @@ func (s *userService) GetUser(ctx context.Context, id uint) (*model.User, error)
 
 func (s *userService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return s.repo.List(ctx)
+}
+
+func (s *userService) SeedAdmin(ctx context.Context) error {
+	count, err := s.repo.Count(ctx)
+	if err != nil || count > 0 {
+		return err
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.Create(ctx, &model.User{
+		Email:        "admin@localhost",
+		PasswordHash: string(hash),
+		Name:         "Admin",
+		Role:         model.RoleAdmin,
+		JwtID:        uuid.New().String(),
+	})
 }
