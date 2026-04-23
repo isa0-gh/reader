@@ -15,6 +15,7 @@ import (
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
 	"github.com/isa0-gh/reader/internal/service"
+	"github.com/isa0-gh/reader/internal/storage"
 )
 
 func main() {
@@ -55,6 +56,9 @@ func main() {
 	chapterSvc := service.NewChapterService(chapterRepo)
 	chapterHandler := handler.NewChapterHandler(chapterSvc)
 
+	s3Client := storage.NewS3Client(cfg)
+	uploadHandler := handler.NewUploadHandler(s3Client)
+
 	// Setup Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -83,6 +87,12 @@ func main() {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
 			r.Get("/", userHandler.List)
 			r.Get("/{id}", userHandler.Get)
+		})
+
+		// Upload (presign) — requires auth
+		r.Group(func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Post("/upload/presign", uploadHandler.Presign)
 		})
 
 		// Series
