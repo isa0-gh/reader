@@ -43,11 +43,10 @@ func NewS3Client(cfg *config.Config) *S3Client {
 }
 
 // PresignPut returns a presigned PUT URL for direct browser upload.
-func (s *S3Client) PresignPut(ctx context.Context, key, contentType string) (string, error) {
+func (s *S3Client) PresignPut(ctx context.Context, key string) (string, error) {
 	req, err := s.presigner.PresignPutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucket),
-		Key:         aws.String(key),
-		ContentType: aws.String(contentType),
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
 	}, s3.WithPresignExpires(15*time.Minute))
 	if err != nil {
 		return "", fmt.Errorf("presign: %w", err)

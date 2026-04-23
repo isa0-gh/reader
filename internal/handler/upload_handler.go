@@ -20,19 +20,18 @@ func NewUploadHandler(s3 *storage.S3Client) *UploadHandler { return &UploadHandl
 // Returns: { "upload_url": "...", "key": "...", "public_url": "..." }
 func (h *UploadHandler) Presign(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Filename    string `json:"filename"`
-		ContentType string `json:"content_type"`
-		Prefix      string `json:"prefix"` // e.g. "covers", "chapters/1", "avatars"
+		Filename string `json:"filename"`
+		Prefix   string `json:"prefix"` // e.g. "covers", "chapters/1", "avatars"
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Filename == "" {
-		http.Error(w, "filename and content_type required", http.StatusBadRequest)
+		http.Error(w, "filename required", http.StatusBadRequest)
 		return
 	}
 
 	ext := filepath.Ext(req.Filename)
 	key := fmt.Sprintf("%s/%d%s", strings.Trim(req.Prefix, "/"), time.Now().UnixNano(), ext)
 
-	url, err := h.s3.PresignPut(r.Context(), key, req.ContentType)
+	url, err := h.s3.PresignPut(r.Context(), key)
 	if err != nil {
 		http.Error(w, "could not generate upload URL", http.StatusInternalServerError)
 		return
