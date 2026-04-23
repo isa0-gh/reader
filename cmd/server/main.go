@@ -41,6 +41,14 @@ func main() {
 	userSvc := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userSvc)
 
+	seriesRepo := repository.NewSeriesRepository(db)
+	seriesSvc := service.NewSeriesService(seriesRepo)
+	seriesHandler := handler.NewSeriesHandler(seriesSvc)
+
+	chapterRepo := repository.NewChapterRepository(db)
+	chapterSvc := service.NewChapterService(chapterRepo)
+	chapterHandler := handler.NewChapterHandler(chapterSvc)
+
 	// Setup Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -70,6 +78,12 @@ func main() {
 			r.Get("/", userHandler.List)
 			r.Get("/{id}", userHandler.Get)
 		})
+
+		// Series
+		r.Get("/series/{id}", seriesHandler.Get)
+
+		// Chapters
+		r.Get("/chapters/{id}", chapterHandler.Get)
 	})
 
 	// Health check
