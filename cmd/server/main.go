@@ -96,6 +96,7 @@ func main() {
 		})
 
 		// Series
+		r.Get("/series", seriesHandler.List)
 		r.Get("/series/{id}", seriesHandler.Get)
 		r.Group(func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
