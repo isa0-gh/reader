@@ -81,9 +81,17 @@ func main() {
 
 		// Series
 		r.Get("/series/{id}", seriesHandler.Get)
+		r.Group(func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.With(appMiddleware.RequirePermission("series:create")).Post("/series", seriesHandler.Create)
+		})
 
 		// Chapters
 		r.Get("/chapters/{id}", chapterHandler.Get)
+		r.Group(func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.With(appMiddleware.RequirePermission("chapter:create")).Post("/chapters", chapterHandler.Create)
+		})
 	})
 
 	// Health check
