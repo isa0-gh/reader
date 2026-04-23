@@ -9,6 +9,7 @@ import (
 
 type ChapterRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Chapter, error)
+	Create(ctx context.Context, c *model.Chapter) error
 }
 
 type chapterRepository struct{ db *gorm.DB }
@@ -23,4 +24,8 @@ func (r *chapterRepository) GetByID(ctx context.Context, id uint) (*model.Chapte
 		return nil, err
 	}
 	return &c, nil
+}
+
+func (r *chapterRepository) Create(ctx context.Context, c *model.Chapter) error {
+	return r.db.WithContext(ctx).Create(c).Error
 }
