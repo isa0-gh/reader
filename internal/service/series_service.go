@@ -9,6 +9,7 @@ import (
 
 type SeriesService interface {
 	GetSeries(ctx context.Context, id uint) (*model.Series, error)
+	CreateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
 }
 
 type seriesService struct{ repo repository.SeriesRepository }
@@ -19,4 +20,11 @@ func NewSeriesService(repo repository.SeriesRepository) SeriesService {
 
 func (s *seriesService) GetSeries(ctx context.Context, id uint) (*model.Series, error) {
 	return s.repo.GetByID(ctx, id)
+}
+
+func (s *seriesService) CreateSeries(ctx context.Context, series *model.Series) (*model.Series, error) {
+	if err := s.repo.Create(ctx, series); err != nil {
+		return nil, err
+	}
+	return series, nil
 }
