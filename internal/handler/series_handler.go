@@ -16,6 +16,16 @@ func NewSeriesHandler(svc service.SeriesService) *SeriesHandler {
 	return &SeriesHandler{svc: svc}
 }
 
+func (h *SeriesHandler) List(w http.ResponseWriter, r *http.Request) {
+	list, err := h.svc.ListSeries(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
+}
+
 func (h *SeriesHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
