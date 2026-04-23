@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
 
@@ -29,5 +30,50 @@ func (h *SeriesHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(series)
+}
+
+type createSeriesRequest struct {
+	Title       string `json:"title"`
+	Slug        string `json:"slug"`
+	Description string `json:"description"`
+	CoverImage  string `json:"cover_image"`
+	Author      string `json:"author"`
+	Artist      string `json:"artist"`
+	Status      string `json:"status"`
+}
+
+func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req createSeriesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Title == "" || req.Slug == "" {
+		http.Error(w, "title and slug are required", http.StatusBadRequest)
+		return
+	}
+
+	status := model.SeriesStatus(req.Status)
+	if status == "" {
+		status = model.StatusOngoing
+	}
+
+	series, err := h.svc.CreateSeries(r.Context(), &model.Series{
+		Title:       req.Title,
+		Slug:        req.Slug,
+		Description: req.Description,
+		CoverImage:  req.CoverImage,
+		Author:      req.Author,
+		Artist:      req.Artist,
+		Status:      status,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(series)
 }
