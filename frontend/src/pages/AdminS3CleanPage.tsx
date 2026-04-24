@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, S3Object } from "../api";
+import "../admin.css";
 
 export default function AdminS3CleanPage() {
   const [objects, setObjects] = useState<S3Object[]>([]);
@@ -8,11 +9,8 @@ export default function AdminS3CleanPage() {
   const [error, setError] = useState("");
 
   async function load() {
-    try {
-      setObjects(await api.listOrphanedObjects());
-    } catch (e: any) {
-      setError(e.message);
-    }
+    try { setObjects(await api.listOrphanedObjects()); }
+    catch (e: any) { setError(e.message); }
   }
 
   useEffect(() => { load(); }, []);
@@ -24,55 +22,49 @@ export default function AdminS3CleanPage() {
       const res = await api.purgeOrphanedObjects();
       setResult(res);
       setObjects([]);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
   }
 
   if (error) return <p className="error">{error}</p>;
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main className="admin-page">
       <h2>S3 Cleanup</h2>
-      <p>{objects.length} orphaned object(s) found (pages whose chapter has been deleted).</p>
+      <p className="admin-subtext">{objects.length} orphaned object(s) — pages whose chapter or series has been deleted.</p>
 
       {objects.length > 0 && (
         <>
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "1rem" }}>
+          <table className="admin-table">
             <thead>
-              <tr>
-                {["ID", "Key", "Bucket", "Chapter ID", "Page #"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "0.5rem", borderBottom: "1px solid #333" }}>{h}</th>
-                ))}
-              </tr>
+              <tr>{["ID", "Key", "Bucket", "Chapter ID", "Page #"].map((h) => <th key={h}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {objects.map((o) => (
                 <tr key={o.id}>
-                  <td style={{ padding: "0.5rem" }}>{o.id}</td>
-                  <td style={{ padding: "0.5rem", fontFamily: "monospace", fontSize: "0.85em" }}>{o.key}</td>
-                  <td style={{ padding: "0.5rem" }}>{o.bucket}</td>
-                  <td style={{ padding: "0.5rem" }}>{o.chapter_id}</td>
-                  <td style={{ padding: "0.5rem" }}>{o.page_number}</td>
+                  <td>{o.id}</td>
+                  <td className="mono">{o.key}</td>
+                  <td>{o.bucket}</td>
+                  <td>{o.chapter_id}</td>
+                  <td>{o.page_number}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <button onClick={handlePurge} disabled={loading} style={{ color: "red" }}>
+          <button className="btn-outline" onClick={handlePurge} disabled={loading}
+            style={{ color: "var(--danger)", borderColor: "var(--danger)", width: "auto" }}>
             {loading ? "Purging…" : `Purge ${objects.length} object(s)`}
           </button>
         </>
       )}
 
       {result && (
-        <div style={{ marginTop: "1rem" }}>
+        <div className="admin-result">
           <p>✓ Deleted from S3 and DB: {result.deleted?.length ?? 0}</p>
           {result.failed?.length > 0 && (
-            <div style={{ color: "red" }}>
-              <p>✗ Failed to delete from S3 ({result.failed.length}) — DB rows kept. Check server logs.</p>
-              <ul>{result.failed.map((k) => <li key={k} style={{ fontFamily: "monospace", fontSize: "0.85em" }}>{k}</li>)}</ul>
+            <div className="fail-list">
+              <p>✗ Failed ({result.failed.length}) — DB rows kept. Check server logs.</p>
+              <ul>{result.failed.map((k) => <li key={k}>{k}</li>)}</ul>
             </div>
           )}
         </div>

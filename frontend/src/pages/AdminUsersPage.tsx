@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, User } from "../api";
 import { useAuth } from "../AuthContext";
+import "../admin.css";
 
 const PAGE_SIZE = 50;
 const ROLES = ["reader", "uploader", "moderator", "admin"];
@@ -14,11 +15,8 @@ export default function AdminUsersPage() {
 
   async function load(after?: number) {
     try {
-      const data = await api.listUsers({ limit: PAGE_SIZE, after });
-      setUsers(data);
-    } catch (e: any) {
-      setError(e.message);
-    }
+      setUsers(await api.listUsers({ limit: PAGE_SIZE, after }));
+    } catch (e: any) { setError(e.message); }
   }
 
   useEffect(() => { load(); }, []);
@@ -33,19 +31,17 @@ export default function AdminUsersPage() {
 
   function prev() {
     const h = [...history];
-    const prev = h.pop();
+    const p = h.pop();
     setHistory(h);
-    setCursor(prev);
-    load(prev === 0 ? undefined : prev);
+    setCursor(p);
+    load(p === 0 ? undefined : p);
   }
 
   async function handleRoleChange(id: number, role: string) {
     try {
       await api.updateUserRole(id, role);
       setUsers((u) => u.map((x) => x.id === id ? { ...x, role } : x));
-    } catch (e: any) {
-      alert(e.message);
-    }
+    } catch (e: any) { alert(e.message); }
   }
 
   async function handleDelete(id: number) {
@@ -53,46 +49,34 @@ export default function AdminUsersPage() {
     try {
       await api.deleteUser(id);
       setUsers((u) => u.filter((x) => x.id !== id));
-    } catch (e: any) {
-      alert(e.message);
-    }
+    } catch (e: any) { alert(e.message); }
   }
 
   if (error) return <p className="error">{error}</p>;
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main className="admin-page">
       <h2>Users</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <table className="admin-table">
         <thead>
-          <tr>
-            {["ID", "Name", "Email", "Role", "Created", ""].map((h, i) => (
-              <th key={i} style={{ textAlign: "left", padding: "0.5rem", borderBottom: "1px solid #333" }}>{h}</th>
-            ))}
-          </tr>
+          <tr>{["ID", "Name", "Email", "Role", "Created", ""].map((h, i) => <th key={i}>{h}</th>)}</tr>
         </thead>
         <tbody>
           {users.map((u) => (
             <tr key={u.id}>
-              <td style={{ padding: "0.5rem" }}>{u.id}</td>
-              <td style={{ padding: "0.5rem" }}>{u.name}</td>
-              <td style={{ padding: "0.5rem" }}>{u.email}</td>
-              <td style={{ padding: "0.5rem" }}>
-                <select
-                  value={u.role}
-                  disabled={u.id === me?.id}
-                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                >
+              <td>{u.id}</td>
+              <td>{u.name}</td>
+              <td>{u.email}</td>
+              <td>
+                <select className="role-select" value={u.role} disabled={u.id === me?.id}
+                  onChange={(e) => handleRoleChange(u.id, e.target.value)}>
                   {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </td>
-              <td style={{ padding: "0.5rem" }}>{new Date(u.created_at).toLocaleDateString()}</td>
-              <td style={{ padding: "0.5rem" }}>
-                <button
-                  disabled={u.id === me?.id}
-                  onClick={() => handleDelete(u.id)}
-                  style={{ color: "red" }}
-                >
+              <td>{new Date(u.created_at).toLocaleDateString()}</td>
+              <td>
+                <button className="btn-outline" style={{ color: "var(--danger)" }}
+                  disabled={u.id === me?.id} onClick={() => handleDelete(u.id)}>
                   Delete
                 </button>
               </td>
@@ -100,9 +84,9 @@ export default function AdminUsersPage() {
           ))}
         </tbody>
       </table>
-      <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
-        <button onClick={prev} disabled={!history.length}>← Prev</button>
-        <button onClick={next} disabled={users.length < PAGE_SIZE}>Next →</button>
+      <div className="admin-pagination">
+        <button className="btn-outline" onClick={prev} disabled={!history.length}>← Prev</button>
+        <button className="btn-outline" onClick={next} disabled={users.length < PAGE_SIZE}>Next →</button>
       </div>
     </main>
   );
