@@ -107,6 +107,7 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
 			r.With(appMiddleware.RequirePermission("series:create")).Post("/series", seriesHandler.Create)
+			r.With(appMiddleware.RequirePermission("series:delete")).Delete("/series/{id}", seriesHandler.Delete)
 		})
 
 		// Chapters
@@ -117,6 +118,7 @@ func main() {
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/{id}/pages", chapterHandler.UploadPages)
 				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
+				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
 			})
 		})
 	})
