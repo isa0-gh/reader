@@ -40,6 +40,7 @@ func (s *userService) RegisterUser(ctx context.Context, email, password, name st
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		Name:         name,
+		Role:         model.RoleReader,
 		JwtID:        uuid.New().String(),
 	}
 
