@@ -61,3 +61,6 @@ func (s *S3Client) PublicURL(key string) string {
 	}
 	return fmt.Sprintf("https://%s.s3.amazonaws.com/%s", s.bucket, key)
 }
+
+// Bucket returns the configured bucket name.
+func (s *S3Client) Bucket() string { return s.bucket }

@@ -42,5 +42,6 @@ func (h *UploadHandler) Presign(w http.ResponseWriter, r *http.Request) {
 		"upload_url": url,
 		"key":        key,
 		"public_url": h.s3.PublicURL(key),
+		"bucket":     h.s3.Bucket(),
 	})
 }
