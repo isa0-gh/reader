@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -65,7 +66,17 @@ func (s *S3Client) PublicURL(key string) string {
 // Bucket returns the configured bucket name.
 func (s *S3Client) Bucket() string { return s.bucket }
 
-// DeleteObject deletes a key from the given bucket.
+// KeyFromURL extracts the S3 key from a public URL, or returns "" if unrecognized.
+func (s *S3Client) KeyFromURL(url string) string {
+	if s.cdnPrefix != "" && strings.HasPrefix(url, s.cdnPrefix+"/") {
+		return strings.TrimPrefix(url, s.cdnPrefix+"/")
+	}
+	prefix := fmt.Sprintf("https://%s.s3.amazonaws.com/", s.bucket)
+	if strings.HasPrefix(url, prefix) {
+		return strings.TrimPrefix(url, prefix)
+	}
+	return ""
+}
 func (s *S3Client) DeleteObject(ctx context.Context, bucket, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
