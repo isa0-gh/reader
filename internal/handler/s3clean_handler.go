@@ -37,6 +37,22 @@ func (h *S3CleanHandler) List(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Include covers from soft-deleted series
+	var deletedSeries []model.Series
+	h.db.Unscoped().Where("deleted_at IS NOT NULL AND cover_image != ''").Find(&deletedSeries)
+	for _, s := range deletedSeries {
+		key := h.s3.KeyFromURL(s.CoverImage)
+		if key == "" {
+			continue
+		}
+		objs = append(objs, model.S3Object{
+			ID:     s.ID,
+			Bucket: h.s3.Bucket(),
+			Key:    key,
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(objs)
 }
@@ -50,6 +66,8 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var deleted, failed []string
+
+	// Delete orphaned page objects
 	for _, obj := range objs {
 		if err := h.s3.DeleteObject(r.Context(), obj.Bucket, obj.Key); err != nil {
 			log.Printf("s3clean: failed to delete s3://%s/%s: %v", obj.Bucket, obj.Key, err)
@@ -58,6 +76,23 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 		}
 		h.db.Unscoped().Delete(&obj)
 		deleted = append(deleted, obj.Key)
+	}
+
+	// Delete covers from soft-deleted series
+	var deletedSeries []model.Series
+	h.db.Unscoped().Where("deleted_at IS NOT NULL AND cover_image != ''").Find(&deletedSeries)
+	for _, s := range deletedSeries {
+		key := h.s3.KeyFromURL(s.CoverImage)
+		if key == "" {
+			continue
+		}
+		if err := h.s3.DeleteObject(r.Context(), h.s3.Bucket(), key); err != nil {
+			log.Printf("s3clean: failed to delete cover s3://%s/%s: %v", h.s3.Bucket(), key, err)
+			failed = append(failed, key)
+			continue
+		}
+		h.db.Unscoped().Model(&s).Update("cover_image", "")
+		deleted = append(deleted, key)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
