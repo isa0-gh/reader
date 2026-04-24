@@ -5,13 +5,14 @@ function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T = void>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {
     headers: { "Content-Type": "application/json", ...authHeader() },
     ...init,
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : (undefined as T);
 }
 
 export const api = {
@@ -34,18 +35,24 @@ export const api = {
   createChapter: (data: { series_id: number; number: number; title: string }) =>
     request<Chapter>("/chapters", { method: "POST", body: JSON.stringify(data) }),
 
+  uploadChapterPages: (chapterId: number, pages: { key: string; bucket: string; page_number: number }[]) =>
+    request(`/chapters/${chapterId}/pages`, { method: "POST", body: JSON.stringify({ pages }) }),
+
+  deleteChapterPage: (chapterId: number, pageId: number) =>
+    request(`/chapters/${chapterId}/pages/${pageId}`, { method: "DELETE" }),
+
   presign: (filename: string, prefix: string) =>
-    request<{ upload_url: string; key: string; public_url: string }>("/upload/presign", {
+    request<{ upload_url: string; key: string; public_url: string; bucket: string }>("/upload/presign", {
       method: "POST",
       body: JSON.stringify({ filename, prefix }),
     }),
 };
 
-export async function uploadFile(file: File, prefix: string): Promise<{ key: string; public_url: string }> {
-  const { upload_url, key, public_url } = await api.presign(file.name, prefix);
+export async function uploadFile(file: File, prefix: string): Promise<{ key: string; bucket: string; public_url: string }> {
+  const { upload_url, key, public_url, bucket } = await api.presign(file.name, prefix);
   const res = await fetch(upload_url, { method: "PUT", body: file });
   if (!res.ok) throw new Error("Upload failed");
-  return { key, public_url };
+  return { key, bucket, public_url };
 }
 
 export interface Series {
