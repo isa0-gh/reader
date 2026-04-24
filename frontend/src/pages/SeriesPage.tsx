@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import CreateChapterModal from "../components/CreateChapterModal";
 
 const CAN_CREATE = ["uploader", "moderator", "admin"];
+const CAN_DELETE = ["moderator", "admin"];
 
 export default function SeriesPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,20 @@ export default function SeriesPage() {
 
   const chapters = [...(series.chapters ?? [])].sort((a, b) => b.number - a.number);
   const canCreate = user && CAN_CREATE.includes(user.role);
+  const canDelete = user && CAN_DELETE.includes(user.role);
+
+  async function handleDeleteSeries() {
+    if (!confirm("Delete this series?")) return;
+    await api.deleteSeries(series!.id);
+    nav("/");
+  }
+
+  async function handleDeleteChapter(e: React.MouseEvent, chId: number) {
+    e.stopPropagation();
+    if (!confirm("Delete this chapter?")) return;
+    await api.deleteChapter(chId);
+    setSeries((prev) => prev ? { ...prev, chapters: prev.chapters.filter((c) => c.id !== chId) } : prev);
+  }
 
   function onChapterCreated(c: Chapter) {
     setSeries((prev) => prev ? { ...prev, chapters: [c, ...(prev.chapters ?? [])] } : prev);
@@ -42,6 +57,7 @@ export default function SeriesPage() {
             <span> · {series.status}</span>
           </div>
           {series.description && <p>{series.description}</p>}
+          {canDelete && <button className="btn-outline" style={{ color: "red" }} onClick={handleDeleteSeries}>Delete Series</button>}
         </div>
       </div>
 
@@ -53,6 +69,7 @@ export default function SeriesPage() {
         {chapters.map((ch) => (
           <div key={ch.id} className="chapter-item" onClick={() => nav(`/series/${series.id}/${ch.id}`)}>
             <span className="ch-num">Ch. {ch.number}{ch.title ? ` — ${ch.title}` : ""}</span>
+            {canDelete && <button className="btn-outline" style={{ color: "red" }} onClick={(e) => handleDeleteChapter(e, ch.id)}>Delete</button>}
           </div>
         ))}
       </div>
