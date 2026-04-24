@@ -18,7 +18,9 @@ type UserService interface {
 	RegisterUser(ctx context.Context, email, password, name string) (*model.User, error)
 	Login(ctx context.Context, email, password string) (string, *model.User, error)
 	GetUser(ctx context.Context, id uint) (*model.User, error)
-	ListUsers(ctx context.Context) ([]model.User, error)
+	ListUsers(ctx context.Context, limit int, after, before uint) ([]model.User, error)
+	UpdateRole(ctx context.Context, id uint, role model.Role) error
+	DeleteUser(ctx context.Context, id uint) error
 	SeedAdmin(ctx context.Context) error
 }
 
@@ -95,8 +97,21 @@ func (s *userService) GetUser(ctx context.Context, id uint) (*model.User, error)
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *userService) ListUsers(ctx context.Context) ([]model.User, error) {
-	return s.repo.List(ctx)
+func (s *userService) ListUsers(ctx context.Context, limit int, after, before uint) ([]model.User, error) {
+	return s.repo.List(ctx, limit, after, before)
+}
+
+func (s *userService) UpdateRole(ctx context.Context, id uint, role model.Role) error {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	user.Role = role
+	return s.repo.Update(ctx, user)
+}
+
+func (s *userService) DeleteUser(ctx context.Context, id uint) error {
+	return s.repo.Delete(ctx, id)
 }
 
 func (s *userService) SeedAdmin(ctx context.Context) error {
