@@ -1,12 +1,24 @@
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export default function Nav() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   function handleLogout() {
     logout();
+    setOpen(false);
     nav("/");
   }
 
@@ -15,12 +27,25 @@ export default function Nav() {
       <Link to="/" className="logo">Reader</Link>
       <div className="nav-links">
         {user ? (
-          <>
-            <span>{user.name}</span>
-            {user.role === "admin" && <Link to="/admin/users">Users</Link>}
-            {user.role === "admin" && <Link to="/admin/s3">S3 Clean</Link>}
-            <a href="#" onClick={handleLogout}>Logout</a>
-          </>
+          <div className="account-menu" ref={ref}>
+            <button className="account-trigger" onClick={() => setOpen((o) => !o)} aria-haspopup="true" aria-expanded={open}>
+              <span>{user.name}</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ opacity: 0.5, transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "none" }}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {open && (
+              <div className="account-dropdown" role="menu">
+                <div className="dropdown-label">{user.email ?? user.name}</div>
+                {user.role === "admin" && <>
+                  <Link to="/admin/users" className="dropdown-item" onClick={() => setOpen(false)} role="menuitem">Users</Link>
+                  <Link to="/admin/s3" className="dropdown-item" onClick={() => setOpen(false)} role="menuitem">S3 Cleanup</Link>
+                  <div className="dropdown-divider" />
+                </>}
+                <button className="dropdown-item dropdown-item--danger" onClick={handleLogout} role="menuitem">Logout</button>
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <Link to="/login">Login</Link>
