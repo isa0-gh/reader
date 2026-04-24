@@ -13,7 +13,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id uint) error
-	List(ctx context.Context) ([]model.User, error)
+	List(ctx context.Context, limit int, after, before uint) ([]model.User, error)
 	Count(ctx context.Context) (int64, error)
 }
 
@@ -53,9 +53,16 @@ func (r *userRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&model.User{}, id).Error
 }
 
-func (r *userRepository) List(ctx context.Context) ([]model.User, error) {
+func (r *userRepository) List(ctx context.Context, limit int, after, before uint) ([]model.User, error) {
 	var users []model.User
-	if err := r.db.WithContext(ctx).Find(&users).Error; err != nil {
+	q := r.db.WithContext(ctx).Order("id asc").Limit(limit)
+	if after > 0 {
+		q = q.Where("id > ?", after)
+	}
+	if before > 0 {
+		q = q.Where("id < ?", before)
+	}
+	if err := q.Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
