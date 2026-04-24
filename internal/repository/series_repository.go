@@ -11,6 +11,7 @@ type SeriesRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Series, error)
 	Create(ctx context.Context, s *model.Series) error
 	List(ctx context.Context) ([]model.Series, error)
+	Delete(ctx context.Context, id uint) error
 }
 
 type seriesRepository struct{ db *gorm.DB }
@@ -37,4 +38,8 @@ func (r *seriesRepository) List(ctx context.Context) ([]model.Series, error) {
 		return nil, err
 	}
 	return list, nil
+}
+
+func (r *seriesRepository) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&model.Series{}, id).Error
 }
