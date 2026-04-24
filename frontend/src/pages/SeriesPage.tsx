@@ -27,7 +27,7 @@ export default function SeriesPage() {
   function onChapterCreated(c: Chapter) {
     setSeries((prev) => prev ? { ...prev, chapters: [c, ...(prev.chapters ?? [])] } : prev);
     setShowCreate(false);
-    nav(`/chapters/${c.id}`);
+    nav(`/series/${series!.id}/${c.id}`);
   }
 
   return (
@@ -51,7 +51,7 @@ export default function SeriesPage() {
           {canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}>+ New Chapter</button>}
         </div>
         {chapters.map((ch) => (
-          <div key={ch.id} className="chapter-item" onClick={() => nav(`/chapters/${ch.id}`)}>
+          <div key={ch.id} className="chapter-item" onClick={() => nav(`/series/${series.id}/${ch.id}`)}>
             <span className="ch-num">Ch. {ch.number}{ch.title ? ` — ${ch.title}` : ""}</span>
           </div>
         ))}
