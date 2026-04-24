@@ -9,6 +9,8 @@ import ChapterEditPage from "./pages/ChapterEditPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
+import AdminUsersPage from "./pages/AdminUsersPage";
+
 export default function App() {
   return (
     <ConfigProvider>
@@ -21,6 +23,7 @@ export default function App() {
           <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
         </Routes>
       </AuthProvider>
     </ConfigProvider>
