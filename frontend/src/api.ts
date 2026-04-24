@@ -25,6 +25,12 @@ export const api = {
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
 
+  listOrphanedObjects: () =>
+    request<S3Object[]>("/admin/s3/orphaned"),
+
+  purgeOrphanedObjects: () =>
+    request<{ deleted: string[]; failed: string[] }>("/admin/s3/orphaned", { method: "DELETE" }),
+
   listUsers: (params?: { limit?: number; after?: number; before?: number }) => {
     const q = new URLSearchParams();
     if (params?.limit) q.set("limit", String(params.limit));
@@ -73,6 +79,15 @@ export async function uploadFile(file: File, prefix: string): Promise<{ key: str
   const res = await fetch(upload_url, { method: "PUT", body: file });
   if (!res.ok) throw new Error("Upload failed");
   return { key, bucket, public_url };
+}
+
+export interface S3Object {
+  id: number;
+  chapter_id: number;
+  bucket: string;
+  key: string;
+  page_number: number;
+  created_at: string;
 }
 
 export interface User {
