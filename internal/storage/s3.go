@@ -65,10 +65,10 @@ func (s *S3Client) PublicURL(key string) string {
 // Bucket returns the configured bucket name.
 func (s *S3Client) Bucket() string { return s.bucket }
 
-// DeleteObject deletes a key from the bucket.
-func (s *S3Client) DeleteObject(ctx context.Context, key string) error {
+// DeleteObject deletes a key from the given bucket.
+func (s *S3Client) DeleteObject(ctx context.Context, bucket, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: aws.String(s.bucket),
+		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	return err

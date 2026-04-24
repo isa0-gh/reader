@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/isa0-gh/reader/internal/model"
@@ -50,11 +51,12 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 
 	var deleted, failed []string
 	for _, obj := range objs {
-		if err := h.s3.DeleteObject(r.Context(), obj.Key); err != nil {
+		if err := h.s3.DeleteObject(r.Context(), obj.Bucket, obj.Key); err != nil {
+			log.Printf("s3clean: failed to delete s3://%s/%s: %v", obj.Bucket, obj.Key, err)
 			failed = append(failed, obj.Key)
 			continue
 		}
-		h.db.Delete(&obj)
+		h.db.Unscoped().Delete(&obj)
 		deleted = append(deleted, obj.Key)
 	}
 
