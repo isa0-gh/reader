@@ -11,6 +11,7 @@ type SeriesService interface {
 	GetSeries(ctx context.Context, id uint) (*model.Series, error)
 	CreateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
 	ListSeries(ctx context.Context) ([]model.Series, error)
+	DeleteSeries(ctx context.Context, id uint) error
 }
 
 type seriesService struct{ repo repository.SeriesRepository }
@@ -32,4 +33,8 @@ func (s *seriesService) CreateSeries(ctx context.Context, series *model.Series) 
 
 func (s *seriesService) ListSeries(ctx context.Context) ([]model.Series, error) {
 	return s.repo.List(ctx)
+}
+
+func (s *seriesService) DeleteSeries(ctx context.Context, id uint) error {
+	return s.repo.Delete(ctx, id)
 }
