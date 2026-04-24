@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
 
@@ -90,7 +91,26 @@ func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-	users, err := h.svc.ListUsers(r.Context())
+	limit := 50
+	var after, before uint
+
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("after"); v != "" {
+		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
+			after = uint(n)
+		}
+	}
+	if v := r.URL.Query().Get("before"); v != "" {
+		if n, err := strconv.ParseUint(v, 10, 32); err == nil {
+			before = uint(n)
+		}
+	}
+
+	users, err := h.svc.ListUsers(r.Context(), limit, after, before)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -98,4 +118,37 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		Role model.Role `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.UpdateRole(r.Context(), uint(id), body.Role); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.DeleteUser(r.Context(), uint(id)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
