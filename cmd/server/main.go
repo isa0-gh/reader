@@ -59,6 +59,7 @@ func main() {
 	s3Client := storage.NewS3Client(cfg)
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
+	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -93,6 +94,14 @@ func main() {
 			r.Get("/{id}", userHandler.Get)
 			r.With(appMiddleware.RequirePermission("user:update")).Patch("/{id}/role", userHandler.UpdateRole)
 			r.With(appMiddleware.RequirePermission("user:delete")).Delete("/{id}", userHandler.Delete)
+		})
+
+		// Admin: S3 cleanup (admin only)
+		r.Route("/admin/s3", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Use(appMiddleware.RequirePermission("user:list"))
+			r.Get("/orphaned", s3CleanHandler.List)
+			r.Delete("/orphaned", s3CleanHandler.Purge)
 		})
 
 		// Upload (presign) — requires auth
