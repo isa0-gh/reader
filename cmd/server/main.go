@@ -58,6 +58,7 @@ func main() {
 
 	s3Client := storage.NewS3Client(cfg)
 	uploadHandler := handler.NewUploadHandler(s3Client)
+	configHandler := handler.NewConfigHandler(cfg)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -76,6 +77,8 @@ func main() {
 
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/config", configHandler.Get)
+
 		// Auth
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", userHandler.Register)
@@ -104,10 +107,14 @@ func main() {
 		})
 
 		// Chapters
-		r.Get("/chapters/{id}", chapterHandler.Get)
-		r.Group(func(r chi.Router) {
-			r.Use(appMiddleware.JWTMiddleware(userRepo))
-			r.With(appMiddleware.RequirePermission("chapter:create")).Post("/chapters", chapterHandler.Create)
+		r.Route("/chapters", func(r chi.Router) {
+			r.Get("/{id}", chapterHandler.Get)
+			r.Group(func(r chi.Router) {
+				r.Use(appMiddleware.JWTMiddleware(userRepo))
+				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
+				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/{id}/pages", chapterHandler.UploadPages)
+				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
+			})
 		})
 	})
 
