@@ -33,7 +33,9 @@ export default function Home() {
       ) : (
         <div className="series-grid">
           {seriesList.map((s) => (
-            <div key={s.id} className="series-card" onClick={() => nav(`/series/${s.id}`)}>
+          <div key={s.id} className="series-card" role="button" tabIndex={0}
+            onClick={() => nav(`/series/${s.id}`)}
+            onKeyDown={(e) => e.key === "Enter" && nav(`/series/${s.id}`)}>
               <img src={s.cover_image || ""} alt={s.title} />
               <div className="card-info">
                 <div className="card-title">{s.title}</div>

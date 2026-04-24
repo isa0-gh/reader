@@ -67,7 +67,9 @@ export default function SeriesPage() {
           {canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}>+ New Chapter</button>}
         </div>
         {chapters.map((ch) => (
-          <div key={ch.id} className="chapter-item" onClick={() => nav(`/series/${series.id}/${ch.id}`)}>
+          <div key={ch.id} className="chapter-item" role="button" tabIndex={0}
+            onClick={() => nav(`/series/${series.id}/${ch.id}`)}
+            onKeyDown={(e) => e.key === "Enter" && nav(`/series/${series.id}/${ch.id}`)}>
             <span className="ch-num">Ch. {ch.number}{ch.title ? ` — ${ch.title}` : ""}</span>
             {canDelete && <button className="btn-outline" style={{ color: "red" }} onClick={(e) => handleDeleteChapter(e, ch.id)}>Delete</button>}
           </div>
