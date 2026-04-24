@@ -68,8 +68,13 @@ export default function AdminS3CleanPage() {
 
       {result && (
         <div style={{ marginTop: "1rem" }}>
-          <p>✓ Deleted: {result.deleted.length}</p>
-          {result.failed.length > 0 && <p style={{ color: "red" }}>✗ Failed: {result.failed.join(", ")}</p>}
+          <p>✓ Deleted from S3 and DB: {result.deleted?.length ?? 0}</p>
+          {result.failed?.length > 0 && (
+            <div style={{ color: "red" }}>
+              <p>✗ Failed to delete from S3 ({result.failed.length}) — DB rows kept. Check server logs.</p>
+              <ul>{result.failed.map((k) => <li key={k} style={{ fontFamily: "monospace", fontSize: "0.85em" }}>{k}</li>)}</ul>
+            </div>
+          )}
         </div>
       )}
     </main>
