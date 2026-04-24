@@ -15,6 +15,14 @@ components:
       bearerFormat: JWT
 
   schemas:
+    Config:
+      type: object
+      properties:
+        cdn_url:           { type: string }
+        register_disabled: { type: boolean }
+        login_disabled:    { type: boolean }
+        maintenance:       { type: boolean }
+
     User:
       type: object
       properties:
@@ -71,6 +79,17 @@ components:
         message: { type: string }
 
 paths:
+  /config:
+    get:
+      summary: Get system configuration
+      tags: [System]
+      responses:
+        "200":
+          description: Configuration settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Config" }
+
   /auth/register:
     post:
       summary: Register a new user
@@ -121,6 +140,180 @@ paths:
                   user:  { $ref: "#/components/schemas/User" }
         "401": { description: Invalid credentials }
 
+  /users:
+    get:
+      summary: List all users (Admin only)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: after
+          in: query
+          schema: { type: integer }
+        - name: before
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+        "401": { description: Unauthorized }
+
+  /users/{id}:
+    get:
+      summary: Get user by ID (Admin only)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { description: Unauthorized }
+        "404": { description: User not found }
+    delete:
+      summary: Delete user (Admin only)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: User deleted }
+        "401": { description: Unauthorized }
+
+  /users/{id}/role:
+    patch:
+      summary: Update user role (Admin only)
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [reader, uploader, moderator, admin] }
+      responses:
+        "204": { description: Role updated }
+        "401": { description: Unauthorized }
+
+  /admin/s3/orphaned:
+    get:
+      summary: List orphaned S3 objects (Admin only)
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: List of orphaned objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/S3Object" }
+    delete:
+      summary: Purge orphaned S3 objects (Admin only)
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Purge results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: array, items: { type: string } }
+                  failed: { type: array, items: { type: string } }
+
+  /upload/presign:
+    post:
+      summary: Generate a presigned S3 upload URL
+      tags: [Upload]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, prefix]
+              properties:
+                filename: { type: string }
+                prefix: { type: string, description: "Storage prefix (e.g. 'covers', 'chapters/1')" }
+      responses:
+        "200":
+          description: Presigned URL and key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url: { type: string }
+                  key: { type: string }
+                  public_url: { type: string }
+                  bucket: { type: string }
+
+  /series:
+    get:
+      summary: List all series
+      tags: [Series]
+      responses:
+        "200":
+          description: List of series
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Series" }
+    post:
+      summary: Create a new series (Moderator only)
+      tags: [Series]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, slug]
+              properties:
+                title:       { type: string }
+                slug:        { type: string }
+                description: { type: string }
+                cover_image: { type: string }
+                author:      { type: string }
+                artist:      { type: string }
+                status:      { type: string, enum: [ongoing, completed, hiatus] }
+      responses:
+        "201":
+          description: Series created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        "401": { description: Unauthorized }
+
   /series/{id}:
     get:
       summary: Get series details by ID
@@ -137,6 +330,41 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Series" }
         "404": { description: Series not found }
+    delete:
+      summary: Delete series (Moderator only)
+      tags: [Series]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Series deleted }
+        "401": { description: Unauthorized }
+
+  /chapters:
+    post:
+      summary: Create a new chapter (Uploader+)
+      tags: [Chapters]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [series_id, number]
+              properties:
+                series_id: { type: integer }
+                number:    { type: number }
+                title:     { type: string }
+      responses:
+        "201":
+          description: Chapter created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chapter" }
 
   /chapters/{id}:
     get:
@@ -154,26 +382,9 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Chapter" }
         "404": { description: Chapter not found }
-
-  /users:
-    get:
-      summary: List all users
-      tags: [Users]
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: List of users
-          content:
-            application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/User" }
-        "401": { description: Unauthorized }
-
-  /users/{id}:
-    get:
-      summary: Get user by ID
-      tags: [Users]
+    delete:
+      summary: Delete chapter (Moderator or Uploader if own)
+      tags: [Chapters]
       security: [{ bearerAuth: [] }]
       parameters:
         - name: id
@@ -181,10 +392,54 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        "200":
-          description: User details
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/User" }
+        "204": { description: Chapter deleted }
         "401": { description: Unauthorized }
-        "404": { description: User not found }
+
+  /chapters/{id}/pages:
+    post:
+      summary: Bulk upload pages to a chapter (Uploader+)
+      tags: [Chapters]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pages]
+              properties:
+                pages:
+                  type: array
+                  items:
+                    type: object
+                    required: [key, bucket, page_number]
+                    properties:
+                      key: { type: string }
+                      bucket: { type: string }
+                      page_number: { type: integer }
+      responses:
+        "201": { description: Pages added }
+        "401": { description: Unauthorized }
+
+  /chapters/{id}/pages/{pageId}:
+    delete:
+      summary: Delete a page from a chapter (Uploader+)
+      tags: [Chapters]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: pageId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Page deleted }
+        "401": { description: Unauthorized }

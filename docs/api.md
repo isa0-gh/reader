@@ -6,6 +6,23 @@ Base URL: `http://localhost:8080/api/v1`
 
 ---
 
+## System
+
+### GET /config
+Get system configuration like CDN URL and feature flags.
+
+**Response `200`**
+```json
+{
+  "cdn_url": "https://cdn.example.com",
+  "register_disabled": false,
+  "login_disabled": false,
+  "maintenance": false
+}
+```
+
+---
+
 ## Auth
 
 ### POST /auth/register
@@ -20,8 +37,6 @@ Register a new user. Default role is `reader`.
 ```json
 { "id": 1, "email": "user@example.com", "name": "John", "role": "reader", ... }
 ```
-
----
 
 ### POST /auth/login
 Returns a JWT valid for 24 hours.
@@ -40,16 +55,30 @@ Returns a JWT valid for 24 hours.
 
 ## Series
 
+### GET /series
+List all series.
+
 ### GET /series/{id}
 Returns series details including its chapter list.
 
-**Response `200`**
+### POST /series _(Moderator+)_
+Create a new series.
+
+**Body**
 ```json
 {
-  "id": 1, "title": "My Manga", "slug": "my-manga",
-  "status": "ongoing", "chapters": [ ... ]
+  "title": "My Manga",
+  "slug": "my-manga",
+  "description": "Optional desc",
+  "cover_image": "key/to/s3/image.jpg",
+  "author": "Author Name",
+  "artist": "Artist Name",
+  "status": "ongoing"
 }
 ```
+
+### DELETE /series/{id} _(Moderator+)_
+Soft-delete a series.
 
 ---
 
@@ -58,33 +87,95 @@ Returns series details including its chapter list.
 ### GET /chapters/{id}
 Returns chapter details including ordered pages (S3 objects).
 
+### POST /chapters _(Uploader+)_
+Create a new chapter entry.
+
+**Body**
+```json
+{ "series_id": 1, "number": 1.5, "title": "Extra Chapter" }
+```
+
+### POST /chapters/{id}/pages _(Uploader+)_
+Bulk add pages to a chapter.
+
+**Body**
+```json
+{
+  "pages": [
+    { "key": "path/001.jpg", "bucket": "my-bucket", "page_number": 1 },
+    { "key": "path/002.jpg", "bucket": "my-bucket", "page_number": 2 }
+  ]
+}
+```
+
+### DELETE /chapters/{id} _(Moderator or Owner)_
+Delete a chapter.
+
+### DELETE /chapters/{id}/pages/{pageId} _(Uploader+)_
+Remove a single page from a chapter.
+
+---
+
+## Upload
+
+### POST /upload/presign _(Authenticated)_
+Generate a presigned S3 PUT URL for uploading files.
+
+**Body**
+```json
+{ "filename": "image.png", "prefix": "covers" }
+```
+
 **Response `200`**
 ```json
 {
-  "id": 1, "series_id": 1, "number": 1.0, "title": "Chapter 1",
-  "pages": [ { "id": 1, "key": "series/1/ch1/001.jpg", "page_number": 1 } ]
+  "upload_url": "https://s3.amazonaws.com/...",
+  "key": "covers/123456789.png",
+  "public_url": "https://cdn.example.com/covers/123456789.png",
+  "bucket": "my-bucket"
 }
 ```
 
 ---
 
-## Users _(requires JWT)_
+## Users _(Admin only)_
 
 Add header: `Authorization: Bearer <token>`
 
 ### GET /users
-List all users.
+List users with pagination. Query params: `limit`, `after`, `before`.
 
 ### GET /users/{id}
 Get a single user by ID.
+
+### PATCH /users/{id}/role
+Change a user's role.
+
+**Body**
+```json
+{ "role": "moderator" }
+```
+
+### DELETE /users/{id}
+Permanently delete a user.
+
+---
+
+## Admin Tools _(Admin only)_
+
+### GET /admin/s3/orphaned
+List S3 objects that are no longer referenced by active chapters or series.
+
+### DELETE /admin/s3/orphaned
+Permanently delete orphaned objects from S3 and database.
 
 ---
 
 ## Roles & Permissions
 
-| Role        | Permissions |
-|-------------|-------------|
-| `reader`    | Read-only |
-| `uploader`  | Create, update, delete **own** chapters |
-| `moderator` | Manage all chapters and series |
-| `admin`     | Full access including user management |
+| Role        | Description | Permissions |
+|-------------|-------------|-------------|
+| `reader`    | Default user | Read-only |
+| `uploader`  | Content creator | Create chapters, Manage own chapters |
+| `moderator` | Content manager | Manage all series and chapters |
+| `admin`     | System admin | Full access including user management |
