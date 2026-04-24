@@ -18,12 +18,13 @@ func NewS3CleanHandler(db *gorm.DB, s3 *storage.S3Client) *S3CleanHandler {
 	return &S3CleanHandler{db: db, s3: s3}
 }
 
-// orphanedObjects returns S3Objects whose chapter has been soft-deleted.
+// orphaned returns S3Objects whose chapter or parent series is soft-deleted or missing.
 func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
 	var objs []model.S3Object
-	err := h.db.
+	err := h.db.Unscoped().
 		Joins("LEFT JOIN chapters ON chapters.id = s3_objects.chapter_id").
-		Where("chapters.deleted_at IS NOT NULL OR chapters.id IS NULL").
+		Joins("LEFT JOIN series ON series.id = chapters.series_id").
+		Where("chapters.deleted_at IS NOT NULL OR chapters.id IS NULL OR series.deleted_at IS NOT NULL OR series.id IS NULL").
 		Find(&objs).Error
 	return objs, err
 }
