@@ -10,6 +10,8 @@ import (
 type ChapterRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Chapter, error)
 	Create(ctx context.Context, c *model.Chapter) error
+	AddPages(ctx context.Context, pages []model.S3Object) error
+	DeletePage(ctx context.Context, chapterID, pageID uint) error
 }
 
 type chapterRepository struct{ db *gorm.DB }
@@ -28,4 +30,12 @@ func (r *chapterRepository) GetByID(ctx context.Context, id uint) (*model.Chapte
 
 func (r *chapterRepository) Create(ctx context.Context, c *model.Chapter) error {
 	return r.db.WithContext(ctx).Create(c).Error
+}
+
+func (r *chapterRepository) AddPages(ctx context.Context, pages []model.S3Object) error {
+	return r.db.WithContext(ctx).Create(&pages).Error
+}
+
+func (r *chapterRepository) DeletePage(ctx context.Context, chapterID, pageID uint) error {
+	return r.db.WithContext(ctx).Where("id = ? AND chapter_id = ?", pageID, chapterID).Delete(&model.S3Object{}).Error
 }

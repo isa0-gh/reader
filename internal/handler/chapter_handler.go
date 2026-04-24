@@ -64,3 +64,59 @@ func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(chapter)
 }
+
+type uploadPagesRequest struct {
+	Pages []struct {
+		Key        string `json:"key"`
+		Bucket     string `json:"bucket"`
+		PageNumber int    `json:"page_number"`
+	} `json:"pages"`
+}
+
+func (h *ChapterHandler) UploadPages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req uploadPagesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	pages := make([]model.S3Object, len(req.Pages))
+	for i, p := range req.Pages {
+		pages[i] = model.S3Object{
+			Key:        p.Key,
+			Bucket:     p.Bucket,
+			PageNumber: p.PageNumber,
+		}
+	}
+
+	if err := h.svc.AddPages(r.Context(), uint(id), pages); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *ChapterHandler) DeletePage(w http.ResponseWriter, r *http.Request) {
+	chapterID, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid chapter id", http.StatusBadRequest)
+		return
+	}
+	pageID, err := strconv.ParseUint(chi.URLParam(r, "pageId"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid page id", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.DeletePage(r.Context(), uint(chapterID), uint(pageID)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

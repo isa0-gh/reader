@@ -10,6 +10,8 @@ import (
 type ChapterService interface {
 	GetChapter(ctx context.Context, id uint) (*model.Chapter, error)
 	CreateChapter(ctx context.Context, c *model.Chapter) (*model.Chapter, error)
+	AddPages(ctx context.Context, chapterID uint, pages []model.S3Object) error
+	DeletePage(ctx context.Context, chapterID, pageID uint) error
 }
 
 type chapterService struct{ repo repository.ChapterRepository }
@@ -27,4 +29,15 @@ func (s *chapterService) CreateChapter(ctx context.Context, c *model.Chapter) (*
 		return nil, err
 	}
 	return c, nil
+}
+
+func (s *chapterService) AddPages(ctx context.Context, chapterID uint, pages []model.S3Object) error {
+	for i := range pages {
+		pages[i].ChapterID = chapterID
+	}
+	return s.repo.AddPages(ctx, pages)
+}
+
+func (s *chapterService) DeletePage(ctx context.Context, chapterID, pageID uint) error {
+	return s.repo.DeletePage(ctx, chapterID, pageID)
 }
