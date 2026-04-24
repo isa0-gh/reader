@@ -43,6 +43,12 @@ export const api = {
   getSeries: (id: number) => request<Series>(`/series/${id}`),
   getChapter: (id: number) => request<Chapter>(`/chapters/${id}`),
 
+  deleteSeries: (id: number) =>
+    request(`/series/${id}`, { method: "DELETE" }),
+
+  deleteChapter: (id: number) =>
+    request(`/chapters/${id}`, { method: "DELETE" }),
+
   createSeries: (data: Partial<Series>) =>
     request<Series>("/series", { method: "POST", body: JSON.stringify(data) }),
 
