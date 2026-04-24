@@ -25,6 +25,20 @@ export const api = {
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
 
+  listUsers: (params?: { limit?: number; after?: number; before?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.after) q.set("after", String(params.after));
+    if (params?.before) q.set("before", String(params.before));
+    return request<User[]>(`/users?${q}`);
+  },
+
+  updateUserRole: (id: number, role: string) =>
+    request(`/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+
+  deleteUser: (id: number) =>
+    request(`/users/${id}`, { method: "DELETE" }),
+
   listSeries: () => request<Series[]>("/series"),
   getSeries: (id: number) => request<Series>(`/series/${id}`),
   getChapter: (id: number) => request<Chapter>(`/chapters/${id}`),
@@ -53,6 +67,14 @@ export async function uploadFile(file: File, prefix: string): Promise<{ key: str
   const res = await fetch(upload_url, { method: "PUT", body: file });
   if (!res.ok) throw new Error("Upload failed");
   return { key, bucket, public_url };
+}
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
 }
 
 export interface Series {
