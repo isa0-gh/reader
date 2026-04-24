@@ -32,6 +32,7 @@ var RolePermissions = map[Role][]string{
 		"series:create",
 		"series:update",
 		"series:delete",
+		"user:list",
 		"user:update",
 		"user:delete",
 	},
