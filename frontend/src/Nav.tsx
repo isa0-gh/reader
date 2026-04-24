@@ -38,8 +38,8 @@ export default function Nav() {
               <div className="account-dropdown" role="menu">
                 <div className="dropdown-label">{user.email ?? user.name}</div>
                 {user.role === "admin" && <>
-                  <Link to="/admin/users" className="dropdown-item" onClick={() => setOpen(false)} role="menuitem">Users</Link>
-                  <Link to="/admin/s3" className="dropdown-item" onClick={() => setOpen(false)} role="menuitem">S3 Cleanup</Link>
+                  <a href="/admin/users" className="dropdown-item" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} role="menuitem">Users ↗</a>
+                  <a href="/admin/s3" className="dropdown-item" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} role="menuitem">S3 Cleanup ↗</a>
                   <div className="dropdown-divider" />
                 </>}
                 <button className="dropdown-item dropdown-item--danger" onClick={handleLogout} role="menuitem">Logout</button>
