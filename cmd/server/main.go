@@ -85,11 +85,14 @@ func main() {
 			r.Post("/login", userHandler.Login)
 		})
 
-		// Users (protected)
+		// Users (admin only)
 		r.Route("/users", func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Use(appMiddleware.RequirePermission("user:list"))
 			r.Get("/", userHandler.List)
 			r.Get("/{id}", userHandler.Get)
+			r.With(appMiddleware.RequirePermission("user:update")).Patch("/{id}/role", userHandler.UpdateRole)
+			r.With(appMiddleware.RequirePermission("user:delete")).Delete("/{id}", userHandler.Delete)
 		})
 
 		// Upload (presign) — requires auth
