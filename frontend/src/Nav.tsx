@@ -17,6 +17,7 @@ export default function Nav() {
         {user ? (
           <>
             <span>{user.name}</span>
+            {user.role === "admin" && <Link to="/admin/users">Users</Link>}
             <a href="#" onClick={handleLogout}>Logout</a>
           </>
         ) : (
