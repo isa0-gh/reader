@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminS3CleanPage from "./pages/AdminS3CleanPage";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
+          <Route path="/admin/s3" element={<AdminS3CleanPage />} />
         </Routes>
       </AuthProvider>
     </ConfigProvider>
