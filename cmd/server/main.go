@@ -30,10 +30,10 @@ func main() {
 
 	// Auto-migrate models
 	if err := db.AutoMigrate(
-		&model.S3Object{},
+		&model.User{},
 		&model.Series{},
 		&model.Chapter{},
-		&model.User{},
+		&model.S3Object{},
 	); err != nil {
 		log.Fatalf("could not migrate database: %v", err)
 	}
