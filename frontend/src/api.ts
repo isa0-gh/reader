@@ -55,7 +55,7 @@ export const api = {
   deleteChapter: (id: number) =>
     request(`/chapters/${id}`, { method: "DELETE" }),
 
-  createSeries: (data: Partial<Series>) =>
+  createSeries: (data: Partial<Series> & { cover_key?: string; cover_bucket?: string }) =>
     request<Series>("/series", { method: "POST", body: JSON.stringify(data) }),
 
   createChapter: (data: { series_id: number; number: number; title: string }) =>
@@ -83,7 +83,7 @@ export async function uploadFile(file: File, prefix: string): Promise<{ key: str
 
 export interface S3Object {
   id: number;
-  chapter_id: number;
+  chapter_id?: number;
   bucket: string;
   key: string;
   page_number: number;
@@ -103,7 +103,7 @@ export interface Series {
   title: string;
   slug: string;
   description: string;
-  cover_image: string;
+  cover_image: S3Object | null;
   author: string;
   artist: string;
   status: string;

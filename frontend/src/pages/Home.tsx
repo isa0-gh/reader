@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { useConfig } from "../ConfigContext";
 import CreateSeriesModal from "../components/CreateSeriesModal";
 import { api, Series } from "../api";
 
@@ -9,6 +10,7 @@ const CAN_CREATE = ["uploader", "moderator", "admin"];
 export default function Home() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const { cdn_url } = useConfig();
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -36,7 +38,7 @@ export default function Home() {
           <div key={s.id} className="series-card" role="button" tabIndex={0}
             onClick={() => nav(`/series/${s.id}`)}
             onKeyDown={(e) => e.key === "Enter" && nav(`/series/${s.id}`)}>
-              <img src={s.cover_image || ""} alt={s.title} />
+              <img src={s.cover_image ? `${cdn_url}/${s.cover_image.key}` : ""} alt={s.title} />
               <div className="card-info">
                 <div className="card-title">{s.title}</div>
                 <div className="card-status">{s.status}</div>

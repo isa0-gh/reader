@@ -22,7 +22,7 @@ func NewSeriesRepository(db *gorm.DB) SeriesRepository {
 
 func (r *seriesRepository) GetByID(ctx context.Context, id uint) (*model.Series, error) {
 	var s model.Series
-	if err := r.db.WithContext(ctx).Preload("Chapters").First(&s, id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Chapters").Preload("CoverImage").First(&s, id).Error; err != nil {
 		return nil, err
 	}
 	return &s, nil
@@ -34,7 +34,7 @@ func (r *seriesRepository) Create(ctx context.Context, s *model.Series) error {
 
 func (r *seriesRepository) List(ctx context.Context) ([]model.Series, error) {
 	var list []model.Series
-	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&list).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("CoverImage").Order("created_at desc").Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil

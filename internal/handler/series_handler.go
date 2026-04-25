@@ -47,7 +47,8 @@ type createSeriesRequest struct {
 	Title       string `json:"title"`
 	Slug        string `json:"slug"`
 	Description string `json:"description"`
-	CoverImage  string `json:"cover_image"`
+	CoverKey    string `json:"cover_key"`
+	CoverBucket string `json:"cover_bucket"`
 	Author      string `json:"author"`
 	Artist      string `json:"artist"`
 	Status      string `json:"status"`
@@ -69,15 +70,23 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		status = model.StatusOngoing
 	}
 
-	series, err := h.svc.CreateSeries(r.Context(), &model.Series{
+	series := &model.Series{
 		Title:       req.Title,
 		Slug:        req.Slug,
 		Description: req.Description,
-		CoverImage:  req.CoverImage,
 		Author:      req.Author,
 		Artist:      req.Artist,
 		Status:      status,
-	})
+	}
+
+	if req.CoverKey != "" && req.CoverBucket != "" {
+		series.CoverImage = &model.S3Object{
+			Key:    req.CoverKey,
+			Bucket: req.CoverBucket,
+		}
+	}
+
+	created, err := h.svc.CreateSeries(r.Context(), series)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -85,7 +94,7 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(series)
+	json.NewEncoder(w).Encode(created)
 }
 
 func (h *SeriesHandler) Delete(w http.ResponseWriter, r *http.Request) {

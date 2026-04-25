@@ -18,12 +18,23 @@ export default function CreateSeriesModal({ onClose, onCreate }: { onClose(): vo
     setLoading(true);
     setError("");
     try {
-      let cover_image = "";
+      let cover_key = "";
+      let cover_bucket = "";
       if (cover) {
-        const { public_url } = await uploadFile(cover, "covers");
-        cover_image = public_url;
+        const res = await uploadFile(cover, "covers");
+        cover_key = res.key;
+        cover_bucket = res.bucket;
       }
-      const series = await api.createSeries({ title, slug, description, author, artist, status, cover_image });
+      const series = await api.createSeries({ 
+        title, 
+        slug, 
+        description, 
+        author, 
+        artist, 
+        status, 
+        cover_key, 
+        cover_bucket 
+      });
       onCreate(series);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create series");

@@ -34,7 +34,7 @@ func (s *chapterService) CreateChapter(ctx context.Context, c *model.Chapter) (*
 
 func (s *chapterService) AddPages(ctx context.Context, chapterID uint, pages []model.S3Object) error {
 	for i := range pages {
-		pages[i].ChapterID = chapterID
+		pages[i].ChapterID = &chapterID
 	}
 	return s.repo.AddPages(ctx, pages)
 }

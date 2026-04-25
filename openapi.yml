@@ -40,7 +40,7 @@ components:
         title:       { type: string }
         slug:        { type: string }
         description: { type: string }
-        cover_image: { type: string }
+        cover_image: { $ref: "#/components/schemas/S3Object" }
         author:      { type: string }
         artist:      { type: string }
         status:      { type: string, enum: [ongoing, completed, hiatus] }
@@ -67,7 +67,7 @@ components:
       type: object
       properties:
         id:          { type: integer }
-        chapter_id:  { type: integer }
+        chapter_id:  { type: integer, nullable: true }
         bucket:      { type: string }
         key:         { type: string }
         page_number: { type: integer }
@@ -302,7 +302,8 @@ paths:
                 title:       { type: string }
                 slug:        { type: string }
                 description: { type: string }
-                cover_image: { type: string }
+                cover_key:   { type: string }
+                cover_bucket: { type: string }
                 author:      { type: string }
                 artist:      { type: string }
                 status:      { type: string, enum: [ongoing, completed, hiatus] }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, Series, Chapter } from "../api";
 import { useAuth } from "../AuthContext";
+import { useConfig } from "../ConfigContext";
 import CreateChapterModal from "../components/CreateChapterModal";
 
 const CAN_CREATE = ["uploader", "moderator", "admin"];
@@ -11,6 +12,7 @@ export default function SeriesPage() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
   const { user } = useAuth();
+  const { cdn_url } = useConfig();
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -48,7 +50,7 @@ export default function SeriesPage() {
   return (
     <div className="container">
       <div className="series-detail">
-        <img src={series.cover_image || ""} alt={series.title} />
+        <img src={series.cover_image ? `${cdn_url}/${series.cover_image.key}` : ""} alt={series.title} />
         <div className="series-meta">
           <h1>{series.title}</h1>
           <div className="meta-row">
