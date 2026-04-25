@@ -20,7 +20,7 @@ export const api = {
     request("/auth/register", { method: "POST", body: JSON.stringify({ email, password, name }) }),
 
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: number; name: string; role: string } }>(
+    request<{ token: string; user: { id: number; name: string; email: string; role: string } }>(
       "/auth/login",
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
