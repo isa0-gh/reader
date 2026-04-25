@@ -28,22 +28,12 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	// Auto-migrate models
-	if err := db.AutoMigrate(
-		&model.User{},
-		&model.Series{},
-	); err != nil {
-		log.Fatalf("could not migrate database: %v", err)
-	}
-	if err := db.AutoMigrate(
-		&model.Chapter{},
-	); err != nil {
-		log.Fatalf("could not migrate database: %v", err)
-	}
-	if err := db.AutoMigrate(
-		&model.S3Object{},
-	); err != nil {
-		log.Fatalf("could not migrate database: %v", err)
+	// Auto-migrate models in dependency order:
+	// S3Object and User have no FKs, Series depends on S3Object, Chapter depends on both
+	for _, m := range []any{&model.S3Object{}, &model.User{}, &model.Series{}, &model.Chapter{}} {
+		if err := db.AutoMigrate(m); err != nil {
+			log.Fatalf("could not migrate database: %v", err)
+		}
 	}
 
 	// Initialize Repository, Service, and Handler
