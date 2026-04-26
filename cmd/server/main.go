@@ -28,9 +28,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	// Auto-migrate models in dependency order:
-	// S3Object and User have no FKs, Series depends on S3Object, Chapter depends on both
-	for _, m := range []any{&model.S3Object{}, &model.User{}, &model.Series{}, &model.Chapter{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
