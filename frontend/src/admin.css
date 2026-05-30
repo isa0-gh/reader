@@ -1,0 +1,118 @@
+.admin-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.admin-page h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  margin-bottom: 1.5rem;
+}
+
+/* Table */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.25rem;
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table td {
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-2);
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table tbody tr { transition: background var(--transition); }
+.admin-table tbody tr:hover { background: var(--hover); }
+
+.admin-table td.mono {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Role select */
+.role-select {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+  font-family: var(--font);
+  background: var(--surface-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.role-select:focus { border-color: var(--fg); box-shadow: 0 0 0 3px rgba(13,13,13,0.08); }
+.role-select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Pagination row */
+.admin-pagination {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Result box */
+.admin-result {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-result p { margin-bottom: 0.25rem; }
+
+.admin-result .fail-list {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(224,49,49,0.06);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-xs);
+  color: var(--danger);
+}
+
+.admin-result .fail-list ul {
+  margin-top: 0.35rem;
+  padding-left: 1rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+}
+
+/* Subtext */
+.admin-subtext {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+}

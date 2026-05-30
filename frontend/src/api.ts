@@ -1,0 +1,125 @@
+const BASE = "/api/v1";
+
+function authHeader(): Record<string, string> {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function request<T = void>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(BASE + path, {
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    ...init,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : (undefined as T);
+}
+
+export const api = {
+  register: (email: string, password: string, name: string) =>
+    request("/auth/register", { method: "POST", body: JSON.stringify({ email, password, name }) }),
+
+  login: (email: string, password: string) =>
+    request<{ token: string; user: { id: number; name: string; email: string; role: string } }>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify({ email, password }) }
+    ),
+
+  listOrphanedObjects: () =>
+    request<S3Object[]>("/admin/s3/orphaned"),
+
+  purgeOrphanedObjects: () =>
+    request<{ deleted: string[]; failed: string[] }>("/admin/s3/orphaned", { method: "DELETE" }),
+
+  listUsers: (params?: { limit?: number; after?: number; before?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.after) q.set("after", String(params.after));
+    if (params?.before) q.set("before", String(params.before));
+    return request<User[]>(`/users?${q}`);
+  },
+
+  updateUserRole: (id: number, role: string) =>
+    request(`/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+
+  deleteUser: (id: number) =>
+    request(`/users/${id}`, { method: "DELETE" }),
+
+  listSeries: () => request<Series[]>("/series"),
+  getSeries: (id: number) => request<Series>(`/series/${id}`),
+  getChapter: (id: number) => request<Chapter>(`/chapters/${id}`),
+
+  deleteSeries: (id: number) =>
+    request(`/series/${id}`, { method: "DELETE" }),
+
+  deleteChapter: (id: number) =>
+    request(`/chapters/${id}`, { method: "DELETE" }),
+
+  createSeries: (data: Partial<Series> & { cover_key?: string; cover_bucket?: string }) =>
+    request<Series>("/series", { method: "POST", body: JSON.stringify(data) }),
+
+  createChapter: (data: { series_id: number; number: number; title: string }) =>
+    request<Chapter>("/chapters", { method: "POST", body: JSON.stringify(data) }),
+
+  uploadChapterPages: (chapterId: number, pages: { key: string; bucket: string; page_number: number }[]) =>
+    request(`/chapters/${chapterId}/pages`, { method: "POST", body: JSON.stringify({ pages }) }),
+
+  deleteChapterPage: (chapterId: number, pageId: number) =>
+    request(`/chapters/${chapterId}/pages/${pageId}`, { method: "DELETE" }),
+
+  presign: (filename: string, prefix: string) =>
+    request<{ upload_url: string; key: string; public_url: string; bucket: string }>("/upload/presign", {
+      method: "POST",
+      body: JSON.stringify({ filename, prefix }),
+    }),
+};
+
+export async function uploadFile(file: File, prefix: string): Promise<{ key: string; bucket: string; public_url: string }> {
+  const { upload_url, key, public_url, bucket } = await api.presign(file.name, prefix);
+  const res = await fetch(upload_url, { method: "PUT", body: file });
+  if (!res.ok) throw new Error("Upload failed");
+  return { key, bucket, public_url };
+}
+
+export interface S3Object {
+  id: number;
+  chapter_id?: number;
+  bucket: string;
+  key: string;
+  page_number: number;
+  created_at: string;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+}
+
+export interface Series {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  cover_image: S3Object | null;
+  author: string;
+  artist: string;
+  status: string;
+  chapters: Chapter[];
+}
+
+export interface Chapter {
+  id: number;
+  series_id: number;
+  number: number;
+  title: string;
+  pages: Page[];
+}
+
+export interface Page {
+  id: number;
+  key: string;
+  page_number: number;
+}
