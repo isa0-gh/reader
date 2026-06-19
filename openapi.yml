@@ -15,8 +15,21 @@ components:
       bearerFormat: JWT
 
   schemas:
+    Health:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          example: reader-api
+
     Config:
       type: object
+      description: Safe public runtime configuration. Secrets and internal connection details are never included.
+      required: [cdn_url, register_disabled, login_disabled, maintenance]
       properties:
         cdn_url:           { type: string }
         register_disabled: { type: boolean }
@@ -79,13 +92,24 @@ components:
         message: { type: string }
 
 paths:
-  /config:
+  /health:
     get:
-      summary: Get system configuration
+      summary: Get service liveness
       tags: [System]
       responses:
         "200":
-          description: Configuration settings
+          description: Service is alive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+
+  /config:
+    get:
+      summary: Get safe public configuration
+      tags: [System]
+      responses:
+        "200":
+          description: Public configuration settings without secrets
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Config" }
