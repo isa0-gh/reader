@@ -56,6 +56,7 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
 	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
+	healthHandler := handler.NewHealthHandler(db)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -128,11 +129,9 @@ func main() {
 		})
 	})
 
-	// Health check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
+	// Health check endpoints
+	r.Get("/health", healthHandler.Health)
+	r.Get("/healthz", healthHandler.Health)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
