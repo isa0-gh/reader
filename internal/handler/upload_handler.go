@@ -16,15 +16,37 @@ type UploadHandler struct{ s3 *storage.S3Client }
 func NewUploadHandler(s3 *storage.S3Client) *UploadHandler { return &UploadHandler{s3: s3} }
 
 // POST /api/v1/upload/presign
-// Body: { "filename": "cover.jpg", "content_type": "image/jpeg", "prefix": "covers" }
+// Body: { "filename": "cover.jpg", "content_type": "image/jpeg", "prefix": "covers", "size": 1234567 }
 // Returns: { "upload_url": "...", "key": "...", "public_url": "..." }
 func (h *UploadHandler) Presign(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Filename string `json:"filename"`
-		Prefix   string `json:"prefix"` // e.g. "covers", "chapters/1", "avatars"
+		Filename    string `json:"filename"`
+		Prefix      string `json:"prefix"` // e.g. "covers", "chapters/1", "avatars"
+		ContentType string `json:"content_type"`
+		Size        int64  `json:"size"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Filename == "" {
 		http.Error(w, "filename required", http.StatusBadRequest)
+		return
+	}
+
+	// Validate content type
+	validTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/jpg":  true,
+		"image/png":  true,
+		"image/webp": true,
+		"image/gif":  true,
+	}
+	if req.ContentType != "" && !validTypes[req.ContentType] {
+		http.Error(w, "only image files allowed (jpeg, png, webp, gif)", http.StatusBadRequest)
+		return
+	}
+
+	// Validate size (10MB max)
+	const maxSize = 10 * 1024 * 1024
+	if req.Size > maxSize {
+		http.Error(w, fmt.Sprintf("file size exceeds limit of %d MB", maxSize/(1024*1024)), http.StatusBadRequest)
 		return
 	}
 
