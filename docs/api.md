@@ -8,8 +8,21 @@ Base URL: `http://localhost:8080/api/v1`
 
 ## System
 
+### GET /health
+Get service liveness for uptime checks.
+
+**Response `200`**
+```json
+{
+  "status": "ok",
+  "service": "reader-api"
+}
+```
+
+The backend also exposes `/health` at the server root for platform probes.
+
 ### GET /config
-Get system configuration like CDN URL and feature flags.
+Get safe public configuration like CDN URL and feature flags. Secrets and internal connection details are not included.
 
 **Response `200`**
 ```json

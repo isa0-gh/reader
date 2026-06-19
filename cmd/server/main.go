@@ -74,6 +74,7 @@ func main() {
 
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/health", configHandler.Health)
 		r.Get("/config", configHandler.Get)
 
 		// Auth
@@ -128,11 +129,8 @@ func main() {
 		})
 	})
 
-	// Health check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
+	// Root health check for platform probes.
+	r.Get("/health", configHandler.Health)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {

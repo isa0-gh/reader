@@ -64,6 +64,8 @@ bun dev
 ## API Documentation
 The API is documented using OpenAPI. You can view the full specification in `openapi.yml` or read the summary in `docs/api.md`.
 
+System probes are available at `GET /api/v1/health` and the root alias `GET /health`. Public runtime config is available at `GET /api/v1/config` and intentionally excludes secrets.
+
 ## Features
 - User registration and authentication.
 - Role-based access control (Reader, Uploader, Moderator, Admin).
