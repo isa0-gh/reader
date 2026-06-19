@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}, &model.CommentLike{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -56,6 +56,10 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
 	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
+
+	commentRepo := repository.NewCommentRepository(db)
+	commentSvc := service.NewCommentService(commentRepo)
+	commentHandler := handler.NewCommentHandler(commentSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -118,13 +122,25 @@ func main() {
 		// Chapters
 		r.Route("/chapters", func(r chi.Router) {
 			r.Get("/{id}", chapterHandler.Get)
+			r.Get("/{chapterID}/comments", commentHandler.List)
 			r.Group(func(r chi.Router) {
 				r.Use(appMiddleware.JWTMiddleware(userRepo))
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/{id}/pages", chapterHandler.UploadPages)
 				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
 				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
+				r.Post("/{chapterID}/comments", commentHandler.Create)
 			})
+		})
+
+		// Comments (authenticated users)
+		r.Route("/comments", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Get("/{commentID}/replies", commentHandler.ListReplies)
+			r.Patch("/{commentID}", commentHandler.Update)
+			r.Delete("/{commentID}", commentHandler.Delete)
+			r.Post("/{commentID}/like", commentHandler.Like)
+			r.Delete("/{commentID}/like", commentHandler.Unlike)
 		})
 	})
 
