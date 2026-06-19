@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.ReadingProgress{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -56,6 +56,10 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
 	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
+	
+	progressRepo := repository.NewProgressRepository(db)
+	progressSvc := service.NewProgressService(progressRepo)
+	progressHandler := handler.NewProgressHandler(progressSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -125,6 +129,15 @@ func main() {
 				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
 				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
 			})
+		})
+
+		// Reading Progress (authenticated users only)
+		r.Route("/progress", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Get("/me", progressHandler.ListMine)
+			r.Get("/series/{seriesID}", progressHandler.GetSeriesProgress)
+			r.Get("/chapters/{chapterID}", progressHandler.Get)
+			r.Put("/chapters/{chapterID}", progressHandler.Update)
 		})
 	})
 
