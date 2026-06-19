@@ -38,6 +38,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userSvc)
+	authHandler := handler.NewAuthHandler(userRepo)
 
 	// Seed first admin if no users exist
 	if err := userSvc.SeedAdmin(context.Background()); err != nil {
@@ -80,6 +81,11 @@ func main() {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", userHandler.Register)
 			r.Post("/login", userHandler.Login)
+			r.Group(func(r chi.Router) {
+				r.Use(appMiddleware.JWTMiddleware(userRepo))
+				r.Post("/refresh", authHandler.Refresh)
+				r.Post("/logout", authHandler.Logout)
+			})
 		})
 
 		// Users (admin only)
