@@ -28,7 +28,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.UserFavorite{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -56,6 +56,10 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
 	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
+
+	favoriteRepo := repository.NewFavoriteRepository(db)
+	favoriteSvc := service.NewFavoriteService(favoriteRepo)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -125,6 +129,15 @@ func main() {
 				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
 				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
 			})
+		})
+
+		// Favorites/Library (authenticated users)
+		r.Route("/favorites", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Get("/", favoriteHandler.List)
+			r.Post("/{seriesID}", favoriteHandler.Add)
+			r.Delete("/{seriesID}", favoriteHandler.Remove)
+			r.Get("/{seriesID}/check", favoriteHandler.Check)
 		})
 	})
 
