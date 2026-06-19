@@ -10,7 +10,7 @@ import (
 type SeriesService interface {
 	GetSeries(ctx context.Context, id uint) (*model.Series, error)
 	CreateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
-	ListSeries(ctx context.Context) ([]model.Series, error)
+	ListSeries(ctx context.Context, query, sort string) ([]model.Series, error)
 	DeleteSeries(ctx context.Context, id uint) error
 }
 
@@ -31,8 +31,8 @@ func (s *seriesService) CreateSeries(ctx context.Context, series *model.Series) 
 	return series, nil
 }
 
-func (s *seriesService) ListSeries(ctx context.Context) ([]model.Series, error) {
-	return s.repo.List(ctx)
+func (s *seriesService) ListSeries(ctx context.Context, query, sort string) ([]model.Series, error) {
+	return s.repo.List(ctx, query, sort)
 }
 
 func (s *seriesService) DeleteSeries(ctx context.Context, id uint) error {
