@@ -17,7 +17,9 @@ func NewSeriesHandler(svc service.SeriesService) *SeriesHandler {
 }
 
 func (h *SeriesHandler) List(w http.ResponseWriter, r *http.Request) {
-	list, err := h.svc.ListSeries(r.Context())
+	query := r.URL.Query().Get("q")
+	sort := r.URL.Query().Get("sort")
+	list, err := h.svc.ListSeries(r.Context(), query, sort)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

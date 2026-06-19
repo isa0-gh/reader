@@ -10,7 +10,7 @@ import (
 type SeriesRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Series, error)
 	Create(ctx context.Context, s *model.Series) error
-	List(ctx context.Context) ([]model.Series, error)
+	List(ctx context.Context, query, sort string) ([]model.Series, error)
 	Delete(ctx context.Context, id uint) error
 }
 
@@ -43,9 +43,24 @@ func (r *seriesRepository) Create(ctx context.Context, s *model.Series) error {
 	})
 }
 
-func (r *seriesRepository) List(ctx context.Context) ([]model.Series, error) {
+func (r *seriesRepository) List(ctx context.Context, query, sort string) ([]model.Series, error) {
 	var list []model.Series
-	if err := r.db.WithContext(ctx).Preload("CoverImage").Order("created_at desc").Find(&list).Error; err != nil {
+	q := r.db.WithContext(ctx).Preload("CoverImage")
+	
+	if query != "" {
+		q = q.Where("title ILIKE ?", "%"+query+"%")
+	}
+	
+	switch sort {
+	case "title":
+		q = q.Order("title asc")
+	case "created":
+		q = q.Order("created_at asc")
+	default:
+		q = q.Order("created_at desc")
+	}
+	
+	if err := q.Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil
