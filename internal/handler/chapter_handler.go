@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	appmw "github.com/isa0-gh/reader/internal/middleware"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
@@ -14,6 +15,35 @@ type ChapterHandler struct{ svc service.ChapterService }
 
 func NewChapterHandler(svc service.ChapterService) *ChapterHandler {
 	return &ChapterHandler{svc: svc}
+}
+
+// authorize checks that the caller either holds the blanket "chapter:<action>"
+// permission or holds "chapter:<action>:own" and uploaded the chapter themselves.
+func (h *ChapterHandler) authorize(w http.ResponseWriter, r *http.Request, id uint, action string) (*model.Chapter, bool) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return nil, false
+	}
+
+	full := "chapter:" + action
+	if !user.HasPermission(full) && !user.HasPermission(full+":own") {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return nil, false
+	}
+
+	chapter, err := h.svc.GetChapter(r.Context(), id)
+	if err != nil {
+		http.Error(w, "chapter not found", http.StatusNotFound)
+		return nil, false
+	}
+
+	if user.HasPermission(full) || (chapter.UploaderID != nil && *chapter.UploaderID == user.ID) {
+		return chapter, true
+	}
+
+	http.Error(w, "forbidden", http.StatusForbidden)
+	return nil, false
 }
 
 func (h *ChapterHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -50,10 +80,16 @@ func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var uploaderID *uint
+	if user, ok := r.Context().Value(appmw.UserContextKey).(*model.User); ok {
+		uploaderID = &user.ID
+	}
+
 	chapter, err := h.svc.CreateChapter(r.Context(), &model.Chapter{
-		SeriesID: req.SeriesID,
-		Number:   req.Number,
-		Title:    req.Title,
+		SeriesID:   req.SeriesID,
+		UploaderID: uploaderID,
+		Number:     req.Number,
+		Title:      req.Title,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -74,6 +110,9 @@ func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	if _, ok := h.authorize(w, r, uint(id), "update"); !ok {
 		return
 	}
 
@@ -108,6 +147,9 @@ func (h *ChapterHandler) ReorderPages(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	if _, ok := h.authorize(w, r, uint(id), "update"); !ok {
 		return
 	}
 
@@ -179,6 +221,9 @@ func (h *ChapterHandler) DeletePage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid page id", http.StatusBadRequest)
 		return
 	}
+	if _, ok := h.authorize(w, r, uint(chapterID), "update"); !ok {
+		return
+	}
 	if err := h.svc.DeletePage(r.Context(), uint(chapterID), uint(pageID)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -190,6 +235,9 @@ func (h *ChapterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	if _, ok := h.authorize(w, r, uint(id), "delete"); !ok {
 		return
 	}
 	if err := h.svc.DeleteChapter(r.Context(), uint(id)); err != nil {

@@ -10,6 +10,7 @@ type Chapter struct {
 	ID         uint           `gorm:"primaryKey" json:"id"`
 	SeriesID   uint           `gorm:"not null;index;constraint:false" json:"series_id"`
 	Series     *Series        `gorm:"-" json:"-"`
+	UploaderID *uint          `gorm:"index" json:"uploader_id,omitempty"`
 	Number     float64        `gorm:"not null" json:"number"`
 	Title      string         `json:"title"`
 	Pages      []S3Object     `gorm:"foreignKey:ChapterID;constraint:OnDelete:CASCADE" json:"pages,omitempty"`
