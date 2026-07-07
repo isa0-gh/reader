@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/isa0-gh/reader/internal/httpx"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
@@ -33,7 +34,7 @@ func (h *SeriesHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	list, total, err := h.svc.ListSeries(r.Context(), limit, offset, q)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -46,13 +47,13 @@ func (h *SeriesHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SeriesHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
 	series, err := h.svc.GetSeries(r.Context(), uint(id))
 	if err != nil {
-		http.Error(w, "series not found", http.StatusNotFound)
+		httpx.WriteError(w, "series not found", http.StatusNotFound)
 		return
 	}
 
@@ -74,11 +75,11 @@ type createSeriesRequest struct {
 func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createSeriesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if req.Title == "" || req.Slug == "" {
-		http.Error(w, "title and slug are required", http.StatusBadRequest)
+		httpx.WriteError(w, "title and slug are required", http.StatusBadRequest)
 		return
 	}
 
@@ -105,7 +106,7 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.svc.CreateSeries(r.Context(), series)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -117,17 +118,17 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *SeriesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
 	var req createSeriesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if req.Title == "" || req.Slug == "" {
-		http.Error(w, "title and slug are required", http.StatusBadRequest)
+		httpx.WriteError(w, "title and slug are required", http.StatusBadRequest)
 		return
 	}
 
@@ -155,7 +156,7 @@ func (h *SeriesHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.svc.UpdateSeries(r.Context(), series)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -166,11 +167,11 @@ func (h *SeriesHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *SeriesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 	if err := h.svc.DeleteSeries(r.Context(), uint(id)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

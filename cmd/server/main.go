@@ -14,6 +14,7 @@ import (
 	"github.com/isa0-gh/reader/internal/config"
 	"github.com/isa0-gh/reader/internal/database"
 	"github.com/isa0-gh/reader/internal/handler"
+	"github.com/isa0-gh/reader/internal/httpx"
 	appMiddleware "github.com/isa0-gh/reader/internal/middleware"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
@@ -96,7 +97,7 @@ func main() {
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if cfg.Maintenance && r.URL.Path != "/health" && r.URL.Path != "/api/v1/config" {
-				http.Error(w, "service is under maintenance", http.StatusServiceUnavailable)
+				httpx.WriteError(w, "service is under maintenance", http.StatusServiceUnavailable)
 				return
 			}
 			next.ServeHTTP(w, r)

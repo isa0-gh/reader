@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/isa0-gh/reader/internal/httpx"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/storage"
 	"gorm.io/gorm"
@@ -55,7 +56,7 @@ func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
 func (h *S3CleanHandler) List(w http.ResponseWriter, r *http.Request) {
 	objs, err := h.orphaned()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -67,7 +68,7 @@ func (h *S3CleanHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 	objs, err := h.orphaned()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
