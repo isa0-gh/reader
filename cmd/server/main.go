@@ -48,6 +48,9 @@ func main() {
 			log.Fatalf("could not migrate database: %v", err)
 		}
 	}
+	if err := database.EnsureForeignKeys(db); err != nil {
+		log.Fatalf("could not ensure foreign key constraints: %v", err)
+	}
 
 	// Initialize Repository, Service, and Handler
 	userRepo := repository.NewUserRepository(db)
