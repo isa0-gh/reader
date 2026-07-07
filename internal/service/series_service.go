@@ -11,7 +11,7 @@ type SeriesService interface {
 	GetSeries(ctx context.Context, id uint) (*model.Series, error)
 	CreateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
 	UpdateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
-	ListSeries(ctx context.Context) ([]model.Series, error)
+	ListSeries(ctx context.Context, limit, offset int, q string) ([]model.Series, int64, error)
 	DeleteSeries(ctx context.Context, id uint) error
 }
 
@@ -39,8 +39,16 @@ func (s *seriesService) UpdateSeries(ctx context.Context, series *model.Series) 
 	return s.repo.GetByID(ctx, series.ID)
 }
 
-func (s *seriesService) ListSeries(ctx context.Context) ([]model.Series, error) {
-	return s.repo.List(ctx)
+func (s *seriesService) ListSeries(ctx context.Context, limit, offset int, q string) ([]model.Series, int64, error) {
+	list, err := s.repo.List(ctx, limit, offset, q)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.repo.Count(ctx, q)
+	if err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
 }
 
 func (s *seriesService) DeleteSeries(ctx context.Context, id uint) error {
