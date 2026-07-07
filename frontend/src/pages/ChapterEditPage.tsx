@@ -10,15 +10,38 @@ export default function ChapterEditPage() {
   const nav = useNavigate();
   const { cdn_url } = useConfig();
   const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [initialPages, setInitialPages] = useState<Page[]>([]);
   const [newFiles, setNewFiles] = useState<FileEntry[]>([]);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  const [chNumber, setChNumber] = useState("");
+  const [chTitle, setChTitle] = useState("");
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   function load() {
-    api.getChapter(Number(chapterId)).then(setChapter).catch(() => {});
+    api.getChapter(Number(chapterId)).then(c => {
+      setChapter(c);
+      setInitialPages(c.pages ?? []);
+      setChNumber(String(c.number));
+      setChTitle(c.title ?? "");
+    }).catch(() => {});
   }
 
   useEffect(load, [chapterId]);
+
+  async function saveInfo() {
+    setError("");
+    setSavingInfo(true);
+    try {
+      const updated = await api.updateChapter(Number(chapterId), { number: parseFloat(chNumber) || 0, title: chTitle });
+      setChapter(prev => prev ? { ...prev, number: updated.number, title: updated.title } : prev);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update chapter");
+    } finally {
+      setSavingInfo(false);
+    }
+  }
 
   function onFilesChange(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).sort((a, b) => a.name.localeCompare(b.name));
@@ -41,15 +64,9 @@ export default function ChapterEditPage() {
         [next[i - 1], next[i]] = [next[i], next[i - 1]];
         return next;
       });
-    } else {
-      if (!chapter || i === 0) return;
-      setChapter(prev => {
-        if (!prev) return prev;
-        const pages = [...prev.pages];
-        [pages[i - 1], pages[i]] = [pages[i], pages[i - 1]];
-        return { ...prev, pages };
-      });
+      return;
     }
+    swapExisting(i, i - 1);
   }
 
   function moveDown(i: number, isNew: boolean) {
@@ -60,26 +77,44 @@ export default function ChapterEditPage() {
         [next[i], next[i + 1]] = [next[i + 1], next[i]];
         return next;
       });
-    } else {
-      setChapter(prev => {
-        if (!prev || i === prev.pages.length - 1) return prev;
-        const pages = [...prev.pages];
-        [pages[i], pages[i + 1]] = [pages[i + 1], pages[i]];
-        return { ...prev, pages };
-      });
+      return;
     }
+    swapExisting(i, i + 1);
+  }
+
+  // Existing pages are ordered by page_number, not array position, so
+  // swapping must operate on the sorted view and write page_number back.
+  function swapExisting(i: number, j: number) {
+    setChapter(prev => {
+      if (!prev) return prev;
+      const sorted = [...prev.pages].sort((a, b) => a.page_number - b.page_number);
+      if (i < 0 || j < 0 || i >= sorted.length || j >= sorted.length) return prev;
+      const a = sorted[i], b = sorted[j];
+      const swappedNum = a.page_number;
+      return {
+        ...prev,
+        pages: prev.pages.map(p => {
+          if (p.id === a.id) return { ...p, page_number: b.page_number };
+          if (p.id === b.id) return { ...p, page_number: swappedNum };
+          return p;
+        }),
+      };
+    });
   }
 
   function setPageNum(i: number, val: string, isNew: boolean) {
     const num = parseInt(val) || 1;
     if (isNew) {
       setNewFiles(prev => prev.map((e, idx) => idx === i ? { ...e, pageNumber: num } : e));
-    } else {
-      setChapter(prev => {
-        if (!prev) return prev;
-        return { ...prev, pages: prev.pages.map((p, idx) => idx === i ? { ...p, page_number: num } : p) };
-      });
+      return;
     }
+    setChapter(prev => {
+      if (!prev) return prev;
+      const sorted = [...prev.pages].sort((a, b) => a.page_number - b.page_number);
+      const target = sorted[i];
+      if (!target) return prev;
+      return { ...prev, pages: prev.pages.map(p => p.id === target.id ? { ...p, page_number: num } : p) };
+    });
   }
 
   function removeNew(i: number) {
@@ -117,9 +152,25 @@ export default function ChapterEditPage() {
     }
   }
 
+  async function saveOrder() {
+    if (!chapter) return;
+    setError("");
+    setSavingOrder(true);
+    try {
+      await api.reorderChapterPages(Number(chapterId), chapter.pages.map(p => ({ id: p.id, page_number: p.page_number })));
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save page order");
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
   if (!chapter) return <div className="container muted">Loading…</div>;
 
   const pages = [...(chapter.pages ?? [])].sort((a, b) => a.page_number - b.page_number);
+  const pagesDirty = JSON.stringify(pages.map(p => [p.id, p.page_number]))
+    !== JSON.stringify([...initialPages].sort((a, b) => a.page_number - b.page_number).map(p => [p.id, p.page_number]));
 
   return (
     <div className="container">
@@ -131,7 +182,22 @@ export default function ChapterEditPage() {
         </div>
       </div>
 
-      <h2 style={{ fontSize: "1rem", marginBottom: "0.75rem" }}>Existing Pages ({pages.length})</h2>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", marginBottom: "2rem" }}>
+        <div className="form-group" style={{ margin: 0 }}>
+          <label>Number</label>
+          <input type="number" step="any" value={chNumber} onChange={e => setChNumber(e.target.value)} style={inputStyle} />
+        </div>
+        <div className="form-group" style={{ margin: 0, flex: 1 }}>
+          <label>Title</label>
+          <input value={chTitle} onChange={e => setChTitle(e.target.value)} style={{ width: "100%", padding: "0.25rem 0.4rem", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.85rem" }} />
+        </div>
+        <button className="btn-outline" onClick={saveInfo} disabled={savingInfo}>{savingInfo ? "Saving…" : "Save Info"}</button>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+        <h2 style={{ fontSize: "1rem", margin: 0 }}>Existing Pages ({pages.length})</h2>
+        {pagesDirty && <button className="btn-outline" onClick={saveOrder} disabled={savingOrder}>{savingOrder ? "Saving…" : "Save Order"}</button>}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "2rem" }}>
         {pages.length === 0
           ? <div className="muted">No pages yet.</div>
