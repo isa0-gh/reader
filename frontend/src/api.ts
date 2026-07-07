@@ -34,6 +34,12 @@ export const api = {
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
 
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request("/users/me/password", {
+      method: "PATCH",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
+
   listOrphanedObjects: () =>
     request<S3Object[]>("/admin/s3/orphaned"),
 

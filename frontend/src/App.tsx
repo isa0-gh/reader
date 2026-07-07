@@ -8,6 +8,7 @@ import ReaderPage from "./pages/ReaderPage";
 import ChapterEditPage from "./pages/ChapterEditPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AccountPage from "./pages/AccountPage";
 
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminS3CleanPage from "./pages/AdminS3CleanPage";
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/s3" element={<AdminS3CleanPage />} />
         </Routes>
