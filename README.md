@@ -41,11 +41,17 @@ A web application for reading manga and comics, featuring a Go backend and a Rea
 2. Update the `.env` file with your specific configuration, including database credentials and S3 settings.
 
 ### Running with Docker
-Start the entire stack using Docker Compose:
+Start the entire stack, including a local Postgres container, using Docker Compose:
 ```bash
-docker-compose up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 The backend will be available at `http://localhost:8080` and the frontend at `http://localhost:5173`.
+
+For a deployment against an external/managed database, use `docker-compose.yml` instead
+(backend + frontend only — set `DB_HOST` and friends in `.env` to point at it):
+```bash
+docker compose up --build
+```
 
 ### Local Development
 
