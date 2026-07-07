@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	"github.com/isa0-gh/reader/internal/config"
 	"github.com/isa0-gh/reader/internal/database"
 	"github.com/isa0-gh/reader/internal/handler"
@@ -17,6 +20,17 @@ import (
 	"github.com/isa0-gh/reader/internal/service"
 	"github.com/isa0-gh/reader/internal/storage"
 )
+
+// clientIPKey rate-limits by the client IP resolved by
+// middleware.ClientIPFromXFFTrustedProxies, rather than trusting
+// X-Forwarded-For/RemoteAddr directly (both are spoofable without it).
+func clientIPKey(r *http.Request) (string, error) {
+	ip := middleware.GetClientIP(r.Context())
+	if ip == "" {
+		return "", errors.New("client ip not resolved")
+	}
+	return httprate.CanonicalizeIP(ip), nil
+}
 
 func main() {
 	// Load configuration
@@ -61,6 +75,11 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	// The backend is only ever reached through the frontend nginx container
+	// (docker-compose publishes no backend port), so there is exactly one
+	// trusted hop between us and the client: resolve the real client IP from
+	// the outermost X-Forwarded-For entry that proxy adds.
+	r.Use(middleware.ClientIPFromXFFTrustedProxies(1))
 
 	// Basic CORS
 	r.Use(cors.Handler(cors.Options{
@@ -88,8 +107,10 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/config", configHandler.Get)
 
-		// Auth
+		// Auth (rate limited per-IP to deter brute-force login/register),
+		// keyed off the client IP resolved by ClientIPFromXFFTrustedProxies.
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(httprate.LimitBy(10, time.Minute, clientIPKey))
 			r.Post("/register", userHandler.Register)
 			r.Post("/login", userHandler.Login)
 		})
@@ -134,11 +155,14 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(appMiddleware.JWTMiddleware(userRepo))
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
-				r.With(appMiddleware.RequirePermission("chapter:update")).Put("/{id}", chapterHandler.Update)
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/{id}/pages", chapterHandler.UploadPages)
-				r.With(appMiddleware.RequirePermission("chapter:update")).Put("/{id}/pages", chapterHandler.ReorderPages)
-				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
-				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
+				// Update/ReorderPages/DeletePage/Delete: chapterHandler.authorize
+				// enforces chapter:X or chapter:X:own (matching uploader) per-request,
+				// since ownership can only be resolved after loading the chapter.
+				r.Put("/{id}", chapterHandler.Update)
+				r.Put("/{id}/pages", chapterHandler.ReorderPages)
+				r.Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
+				r.Delete("/{id}", chapterHandler.Delete)
 			})
 		})
 	})
