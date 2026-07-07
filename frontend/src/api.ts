@@ -10,8 +10,17 @@ async function request<T = void>(path: string, init?: RequestInit): Promise<T> {
     headers: { "Content-Type": "application/json", ...authHeader() },
     ...init,
   });
-  if (!res.ok) throw new Error(await res.text());
   const text = await res.text();
+  if (!res.ok) {
+    let message = text;
+    try {
+      const parsed = JSON.parse(text) as { error?: string };
+      if (parsed.error) message = parsed.error;
+    } catch {
+      // error body wasn't JSON, fall back to raw text
+    }
+    throw new Error(message);
+  }
   return text ? JSON.parse(text) : (undefined as T);
 }
 
