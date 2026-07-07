@@ -37,6 +37,7 @@ export default function Nav() {
             {open && (
               <div className="account-dropdown" role="menu">
                 <div className="dropdown-label">{user.email ?? user.name}</div>
+                <Link to="/account" className="dropdown-item" onClick={() => setOpen(false)} role="menuitem">Account</Link>
                 {user.role === "admin" && <>
                   <a href="/admin/users" className="dropdown-item" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} role="menuitem">Users ↗</a>
                   <a href="/admin/s3" className="dropdown-item" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} role="menuitem">S3 Cleanup ↗</a>

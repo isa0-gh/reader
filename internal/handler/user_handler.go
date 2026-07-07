@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/isa0-gh/reader/internal/config"
 	"github.com/isa0-gh/reader/internal/httpx"
+	appmw "github.com/isa0-gh/reader/internal/middleware"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
@@ -131,6 +132,39 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// PATCH /api/v1/users/me/password — any authenticated user changes their own
+// password. Unlike UpdateRole/Delete this isn't admin-gated: it only ever
+// acts on the caller's own account, taken from the JWT, not a URL param.
+func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.NewPassword == "" {
+		httpx.WriteError(w, "new_password is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.svc.ChangePassword(r.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {

@@ -129,6 +129,13 @@ func main() {
 			r.With(appMiddleware.RequirePermission("user:delete")).Delete("/{id}", userHandler.Delete)
 		})
 
+		// Self-service: any authenticated user manages their own account,
+		// no admin permission required.
+		r.Route("/users/me", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Patch("/password", userHandler.ChangePassword)
+		})
+
 		// Admin: S3 cleanup (admin only)
 		r.Route("/admin/s3", func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
