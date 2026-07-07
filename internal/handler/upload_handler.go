@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/isa0-gh/reader/internal/httpx"
 	"github.com/isa0-gh/reader/internal/storage"
 )
 
@@ -24,7 +25,7 @@ func (h *UploadHandler) Presign(w http.ResponseWriter, r *http.Request) {
 		Prefix   string `json:"prefix"` // e.g. "covers", "chapters/1", "avatars"
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Filename == "" {
-		http.Error(w, "filename required", http.StatusBadRequest)
+		httpx.WriteError(w, "filename required", http.StatusBadRequest)
 		return
 	}
 
@@ -33,7 +34,7 @@ func (h *UploadHandler) Presign(w http.ResponseWriter, r *http.Request) {
 
 	url, err := h.s3.PresignPut(r.Context(), key)
 	if err != nil {
-		http.Error(w, "could not generate upload URL", http.StatusInternalServerError)
+		httpx.WriteError(w, "could not generate upload URL", http.StatusInternalServerError)
 		return
 	}
 

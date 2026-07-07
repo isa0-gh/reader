@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/isa0-gh/reader/internal/config"
+	"github.com/isa0-gh/reader/internal/httpx"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
@@ -28,19 +29,19 @@ type RegisterRequest struct {
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.RegisterDisabled {
-		http.Error(w, "registration is disabled", http.StatusForbidden)
+		httpx.WriteError(w, "registration is disabled", http.StatusForbidden)
 		return
 	}
 
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.RegisterUser(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -61,19 +62,19 @@ type LoginResponse struct {
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.LoginDisabled {
-		http.Error(w, "login is disabled", http.StatusForbidden)
+		httpx.WriteError(w, "login is disabled", http.StatusForbidden)
 		return
 	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	token, user, err := h.svc.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		httpx.WriteError(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -88,13 +89,13 @@ func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.svc.GetUser(r.Context(), uint(id))
 	if err != nil {
-		http.Error(w, "user not found", http.StatusNotFound)
+		httpx.WriteError(w, "user not found", http.StatusNotFound)
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.svc.ListUsers(r.Context(), limit, after, before)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -135,18 +136,18 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 	var body struct {
 		Role model.Role `json:"role"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := h.svc.UpdateRole(r.Context(), uint(id), body.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -155,11 +156,11 @@ func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		httpx.WriteError(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 	if err := h.svc.DeleteUser(r.Context(), uint(id)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

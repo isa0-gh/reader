@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/isa0-gh/reader/internal/httpx"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/repository"
 )
@@ -32,13 +33,13 @@ func JWTMiddleware(userRepo repository.UserRepository) func(http.Handler) http.H
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, "Authorization header is required", http.StatusUnauthorized)
+				httpx.WriteError(w, "Authorization header is required", http.StatusUnauthorized)
 				return
 			}
 
 			bearerToken := strings.Split(authHeader, " ")
 			if len(bearerToken) != 2 || strings.ToLower(bearerToken[0]) != "bearer" {
-				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
+				httpx.WriteError(w, "Invalid authorization header format", http.StatusUnauthorized)
 				return
 			}
 
@@ -53,14 +54,14 @@ func JWTMiddleware(userRepo repository.UserRepository) func(http.Handler) http.H
 			})
 
 			if err != nil || !token.Valid {
-				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+				httpx.WriteError(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
 			}
 
 			// Revocation logic: Check if JwtID matches the one in the database
 			user, err := userRepo.GetByID(r.Context(), claims.UserID)
 			if err != nil || user.JwtID != claims.JwtID {
-				http.Error(w, "Token has been revoked", http.StatusUnauthorized)
+				httpx.WriteError(w, "Token has been revoked", http.StatusUnauthorized)
 				return
 			}
 
@@ -76,7 +77,7 @@ func RequirePermission(perm string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := r.Context().Value(UserContextKey).(*model.User)
 			if !ok || !user.HasPermission(perm) {
-				http.Error(w, "forbidden", http.StatusForbidden)
+				httpx.WriteError(w, "forbidden", http.StatusForbidden)
 				return
 			}
 			next.ServeHTTP(w, r)
