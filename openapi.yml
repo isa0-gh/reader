@@ -53,10 +53,11 @@ components:
     Chapter:
       type: object
       properties:
-        id:         { type: integer }
-        series_id:  { type: integer }
-        number:     { type: number }
-        title:      { type: string }
+        id:          { type: integer }
+        series_id:   { type: integer }
+        uploader_id: { type: integer, nullable: true }
+        number:      { type: number }
+        title:       { type: string }
         pages:
           type: array
           items: { $ref: "#/components/schemas/S3Object" }
@@ -76,7 +77,7 @@ components:
     Error:
       type: object
       properties:
-        message: { type: string }
+        error: { type: string }
 
 paths:
   /config:
@@ -93,6 +94,7 @@ paths:
   /auth/register:
     post:
       summary: Register a new user
+      description: Rate limited to 10 requests/minute per client IP. Returns 403 if REGISTER_DISABLED is set.
       tags: [Auth]
       requestBody:
         required: true
@@ -117,6 +119,7 @@ paths:
   /auth/login:
     post:
       summary: Login and receive a JWT
+      description: Rate limited to 10 requests/minute per client IP. Returns 403 if LOGIN_DISABLED is set.
       tags: [Auth]
       requestBody:
         required: true
@@ -219,6 +222,27 @@ paths:
         "204": { description: Role updated }
         "401": { description: Unauthorized }
 
+  /users/me/password:
+    patch:
+      summary: Change your own password
+      description: Any authenticated user, not admin-gated — acts on the caller's own account only. Rotates the session id server-side, invalidating all existing tokens (including the one making this request).
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password:     { type: string }
+      responses:
+        "204": { description: Password changed }
+        "400": { description: Current password incorrect, or new_password missing }
+        "401": { description: Unauthorized }
+
   /admin/s3/orphaned:
     get:
       summary: List orphaned S3 objects (Admin only)
@@ -277,16 +301,32 @@ paths:
 
   /series:
     get:
-      summary: List all series
+      summary: List series
+      description: Paginated and optionally filtered by title.
       tags: [Series]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 24 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: q
+          in: query
+          description: Case-insensitive title search
+          schema: { type: string }
       responses:
         "200":
-          description: List of series
+          description: Page of series plus total matching count
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: "#/components/schemas/Series" }
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Series" }
+                  total: { type: integer }
     post:
       summary: Create a new series (Moderator only)
       tags: [Series]
@@ -331,6 +371,39 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Series" }
         "404": { description: Series not found }
+    put:
+      summary: Update series metadata (Moderator only)
+      description: Full replace, same fields as create. Omit cover_key/cover_bucket to keep the existing cover image.
+      tags: [Series]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, slug]
+              properties:
+                title:        { type: string }
+                slug:         { type: string }
+                description:  { type: string }
+                cover_key:    { type: string }
+                cover_bucket: { type: string }
+                author:       { type: string }
+                artist:       { type: string }
+                status:       { type: string, enum: [ongoing, completed, hiatus] }
+      responses:
+        "200":
+          description: Series updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Series" }
+        "401": { description: Unauthorized }
     delete:
       summary: Delete series (Moderator only)
       tags: [Series]
@@ -383,8 +456,35 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Chapter" }
         "404": { description: Chapter not found }
+    put:
+      summary: Update chapter number/title (Moderator+, or Uploader if own)
+      tags: [Chapters]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                number: { type: number }
+                title:  { type: string }
+      responses:
+        "200":
+          description: Chapter updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chapter" }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — not the uploader and no blanket chapter:update permission }
+        "404": { description: Chapter not found }
     delete:
-      summary: Delete chapter (Moderator or Uploader if own)
+      summary: Delete chapter (Moderator+, or Uploader if own)
       tags: [Chapters]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -395,6 +495,7 @@ paths:
       responses:
         "204": { description: Chapter deleted }
         "401": { description: Unauthorized }
+        "403": { description: Forbidden — not the uploader and no blanket chapter:delete permission }
 
   /chapters/{id}/pages:
     post:
@@ -426,10 +527,40 @@ paths:
       responses:
         "201": { description: Pages added }
         "401": { description: Unauthorized }
+    put:
+      summary: Reorder pages within a chapter (Moderator+, or Uploader if own)
+      description: Bulk-sets page_number for the given page ids. Ids not belonging to this chapter are silently ignored.
+      tags: [Chapters]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pages]
+              properties:
+                pages:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, page_number]
+                    properties:
+                      id:          { type: integer }
+                      page_number: { type: integer }
+      responses:
+        "204": { description: Page order updated }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — not the uploader and no blanket chapter:update permission }
 
   /chapters/{id}/pages/{pageId}:
     delete:
-      summary: Delete a page from a chapter (Uploader+)
+      summary: Delete a page from a chapter (Moderator+, or Uploader if own)
       tags: [Chapters]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -444,3 +575,4 @@ paths:
       responses:
         "204": { description: Page deleted }
         "401": { description: Unauthorized }
+        "403": { description: Forbidden — not the uploader and no blanket chapter:update permission }
