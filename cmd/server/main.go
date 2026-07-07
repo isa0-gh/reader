@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -74,6 +74,10 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(s3Client)
 	configHandler := handler.NewConfigHandler(cfg)
 	s3CleanHandler := handler.NewS3CleanHandler(db, s3Client)
+
+	commentRepo := repository.NewCommentRepository(db)
+	commentSvc := service.NewCommentService(commentRepo)
+	commentHandler := handler.NewCommentHandler(commentSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -129,6 +133,15 @@ func main() {
 			r.With(appMiddleware.RequirePermission("user:delete")).Delete("/{id}", userHandler.Delete)
 		})
 
+		// Comment suspension: mod/admin (comment:suspend), not gated behind
+		// user:list since moderators can't list/manage users but can moderate
+		// comments.
+		r.Route("/users/{id}/comment-suspension", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Use(appMiddleware.RequirePermission("comment:suspend"))
+			r.Patch("/", userHandler.SuspendComments)
+		})
+
 		// Self-service: any authenticated user manages their own account,
 		// no admin permission required.
 		r.Route("/users/me", func(r chi.Router) {
@@ -163,6 +176,7 @@ func main() {
 		// Chapters
 		r.Route("/chapters", func(r chi.Router) {
 			r.Get("/{id}", chapterHandler.Get)
+			r.Get("/{id}/comments", commentHandler.List)
 			r.Group(func(r chi.Router) {
 				r.Use(appMiddleware.JWTMiddleware(userRepo))
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
@@ -174,7 +188,16 @@ func main() {
 				r.Put("/{id}/pages", chapterHandler.ReorderPages)
 				r.Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
 				r.Delete("/{id}", chapterHandler.Delete)
+				// comment:create is granted by default to every role; the
+				// suspension check happens in the service layer.
+				r.Post("/{id}/comments", commentHandler.Create)
 			})
+		})
+
+		// Comments: delete allows the author or comment:delete (mod/admin).
+		r.Route("/comments", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Delete("/{id}", commentHandler.Delete)
 		})
 	})
 
