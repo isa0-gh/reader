@@ -537,6 +537,89 @@ button:focus-visible, .btn:focus-visible, .btn-outline:focus-visible {
 }
 .modal-close:hover { color: var(--fg); background: var(--hover); }
 
+/* ── Comments ── */
+.comment-section { margin-top: 2.5rem; }
+
+.comment-section-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-list { display: flex; flex-direction: column; }
+
+.comment {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.comment:last-child { border-bottom: none; }
+
+.comment-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--fg-2);
+  flex-shrink: 0;
+}
+
+.comment-body { flex: 1; min-width: 0; }
+
+.comment-header-row { display: flex; align-items: center; gap: 0.5rem; }
+.comment-author { font-weight: 700; font-size: 0.85rem; }
+.comment-time { font-size: 0.72rem; color: var(--muted); }
+
+.comment-text {
+  font-size: 0.88rem;
+  color: var(--fg-2);
+  margin-top: 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+
+.comment-menu { position: relative; margin-left: auto; flex-shrink: 0; }
+
+.comment-menu-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-xs);
+  line-height: 1;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  transition: background var(--transition), color var(--transition);
+}
+.comment-menu-trigger:hover { background: var(--hover); color: var(--fg); }
+
+.comment-form { margin-top: 1.25rem; }
+.comment-form textarea { min-height: 4.5rem; }
+.comment-form .btn { width: auto; padding-left: 1.5rem; padding-right: 1.5rem; }
+
+.comment-login-prompt {
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 /* ── Misc ── */
 .muted { color: var(--muted); font-size: 0.88rem; }
 
