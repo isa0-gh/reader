@@ -80,10 +80,14 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 			failed = append(failed, obj.Key)
 			continue
 		}
-		// If it's a cover image, we should probably also null out the reference in series table if it's still there
-		// but since we are deleting the S3Object record, GORM will handle it if it was a real FK,
-		// or it will just be a dangling ID. Given we use Unscoped().Delete, it's fine.
-		h.db.Unscoped().Delete(&obj)
+		// If this was a cover image still referenced by a soft-deleted series,
+		// the fk_series_cover_image constraint (ON DELETE SET NULL) nulls out
+		// that reference automatically instead of blocking the delete.
+		if err := h.db.Unscoped().Delete(&obj).Error; err != nil {
+			log.Printf("s3clean: deleted s3://%s/%s but failed to remove DB row: %v", obj.Bucket, obj.Key, err)
+			failed = append(failed, obj.Key)
+			continue
+		}
 		deleted = append(deleted, obj.Key)
 	}
 
