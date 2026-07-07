@@ -45,7 +45,13 @@ export const api = {
   deleteUser: (id: number) =>
     request(`/users/${id}`, { method: "DELETE" }),
 
-  listSeries: () => request<Series[]>("/series"),
+  listSeries: (params?: { limit?: number; offset?: number; q?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    if (params?.q) qs.set("q", params.q);
+    return request<{ items: Series[]; total: number }>(`/series?${qs}`);
+  },
   getSeries: (id: number) => request<Series>(`/series/${id}`),
   getChapter: (id: number) => request<Chapter>(`/chapters/${id}`),
 

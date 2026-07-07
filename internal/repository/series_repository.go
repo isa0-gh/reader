@@ -11,7 +11,8 @@ type SeriesRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Series, error)
 	Create(ctx context.Context, s *model.Series) error
 	Update(ctx context.Context, s *model.Series) error
-	List(ctx context.Context) ([]model.Series, error)
+	List(ctx context.Context, limit, offset int, q string) ([]model.Series, error)
+	Count(ctx context.Context, q string) (int64, error)
 	Delete(ctx context.Context, id uint) error
 }
 
@@ -58,12 +59,31 @@ func (r *seriesRepository) Update(ctx context.Context, s *model.Series) error {
 	})
 }
 
-func (r *seriesRepository) List(ctx context.Context) ([]model.Series, error) {
+func (r *seriesRepository) List(ctx context.Context, limit, offset int, q string) ([]model.Series, error) {
 	var list []model.Series
-	if err := r.db.WithContext(ctx).Preload("CoverImage").Order("created_at desc").Find(&list).Error; err != nil {
+	query := r.db.WithContext(ctx).Preload("CoverImage").Order("created_at desc")
+	if q != "" {
+		query = query.Where("title ILIKE ?", "%"+q+"%")
+	}
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Find(&list).Error; err != nil {
 		return nil, err
 	}
 	return list, nil
+}
+
+func (r *seriesRepository) Count(ctx context.Context, q string) (int64, error) {
+	query := r.db.WithContext(ctx).Model(&model.Series{})
+	if q != "" {
+		query = query.Where("title ILIKE ?", "%"+q+"%")
+	}
+	var count int64
+	return count, query.Count(&count).Error
 }
 
 func (r *seriesRepository) Delete(ctx context.Context, id uint) error {

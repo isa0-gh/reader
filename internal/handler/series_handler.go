@@ -17,13 +17,30 @@ func NewSeriesHandler(svc service.SeriesService) *SeriesHandler {
 }
 
 func (h *SeriesHandler) List(w http.ResponseWriter, r *http.Request) {
-	list, err := h.svc.ListSeries(r.Context())
+	limit := 24
+	offset := 0
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+	q := r.URL.Query().Get("q")
+
+	list, total, err := h.svc.ListSeries(r.Context(), limit, offset, q)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	json.NewEncoder(w).Encode(map[string]any{
+		"items": list,
+		"total": total,
+	})
 }
 
 func (h *SeriesHandler) Get(w http.ResponseWriter, r *http.Request) {
