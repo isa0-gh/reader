@@ -187,6 +187,33 @@ func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type suspendCommentsRequest struct {
+	Duration string `json:"duration"`
+}
+
+// SuspendComments is admin/mod-only (comment:suspend). duration accepts the
+// presets "1h"/"1d"/"1y", a custom Go duration string (e.g. "72h30m"), or ""
+// / "none" to lift an existing suspension.
+func (h *UserHandler) SuspendComments(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		httpx.WriteError(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	var req suspendCommentsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, err := h.svc.SuspendComments(r.Context(), uint(id), req.Duration)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {

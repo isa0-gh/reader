@@ -116,6 +116,24 @@ Remove a single page from a chapter.
 
 ---
 
+## Comments
+
+### GET /chapters/{id}/comments
+List comments on a chapter, oldest first. Query params: `limit`, `offset`.
+
+### POST /chapters/{id}/comments _(Authenticated)_
+Post a comment. Requires `comment:create` (granted to every role by default) and no active commenting suspension.
+
+**Body**
+```json
+{ "body": "Great chapter!" }
+```
+
+### DELETE /comments/{id} _(Author, or Moderator+)_
+Delete a comment.
+
+---
+
 ## Upload
 
 ### POST /upload/presign _(Authenticated)_
@@ -159,6 +177,15 @@ Change a user's role.
 ### DELETE /users/{id}
 Permanently delete a user.
 
+### PATCH /users/{id}/comment-suspension _(Moderator+)_
+Suspend or clear a user's commenting permission. Not gated behind admin's `user:list` access — moderators can moderate comments without full user management.
+
+**Body**
+```json
+{ "duration": "1d" }
+```
+`duration` accepts presets (`1h`, `1d`, `1y`), a custom Go duration string (e.g. `72h30m`), or `""` / `"none"` to clear an existing suspension.
+
 ---
 
 ## Admin Tools _(Admin only)_
@@ -175,7 +202,7 @@ Permanently delete orphaned objects from S3 and database.
 
 | Role        | Description | Permissions |
 |-------------|-------------|-------------|
-| `reader`    | Default user | Read-only |
-| `uploader`  | Content creator | Create chapters, Manage own chapters |
-| `moderator` | Content manager | Manage all series and chapters |
-| `admin`     | System admin | Full access including user management |
+| `reader`    | Default user | Post comments |
+| `uploader`  | Content creator | Create chapters, Manage own chapters, Post comments |
+| `moderator` | Content manager | Manage all series and chapters, Post/delete comments, Suspend commenting |
+| `admin`     | System admin | Full access including user management, Post/delete comments, Suspend commenting |

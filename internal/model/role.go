@@ -11,11 +11,14 @@ const (
 
 // Permissions each role grants
 var RolePermissions = map[Role][]string{
-	RoleReader: {},
+	RoleReader: {
+		"comment:create",
+	},
 	RoleUploader: {
 		"chapter:create",
 		"chapter:update:own",
 		"chapter:delete:own",
+		"comment:create",
 	},
 	RoleModerator: {
 		"chapter:create",
@@ -24,6 +27,9 @@ var RolePermissions = map[Role][]string{
 		"series:create",
 		"series:update",
 		"series:delete",
+		"comment:create",
+		"comment:delete",
+		"comment:suspend",
 	},
 	RoleAdmin: {
 		"chapter:create",
@@ -35,6 +41,9 @@ var RolePermissions = map[Role][]string{
 		"user:list",
 		"user:update",
 		"user:delete",
+		"comment:create",
+		"comment:delete",
+		"comment:suspend",
 	},
 }
 

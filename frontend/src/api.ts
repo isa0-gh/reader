@@ -102,6 +102,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ filename, prefix }),
     }),
+
+  listComments: (chapterId: number, params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    return request<{ items: Comment[]; total: number }>(`/chapters/${chapterId}/comments?${qs}`);
+  },
+
+  createComment: (chapterId: number, body: string) =>
+    request<Comment>(`/chapters/${chapterId}/comments`, { method: "POST", body: JSON.stringify({ body }) }),
+
+  deleteComment: (id: number) =>
+    request(`/comments/${id}`, { method: "DELETE" }),
+
+  suspendComments: (userId: number, duration: string) =>
+    request<User>(`/users/${userId}/comment-suspension`, { method: "PATCH", body: JSON.stringify({ duration }) }),
 };
 
 export async function uploadFile(file: File, prefix: string): Promise<{ key: string; bucket: string; public_url: string }> {
@@ -125,6 +141,16 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  created_at: string;
+  comment_suspended_until?: string | null;
+}
+
+export interface Comment {
+  id: number;
+  chapter_id: number;
+  user_id: number;
+  user?: { id: number; name: string };
+  body: string;
   created_at: string;
 }
 
