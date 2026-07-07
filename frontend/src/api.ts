@@ -58,11 +58,20 @@ export const api = {
   createSeries: (data: Partial<Series> & { cover_key?: string; cover_bucket?: string }) =>
     request<Series>("/series", { method: "POST", body: JSON.stringify(data) }),
 
+  updateSeries: (id: number, data: Partial<Series> & { cover_key?: string; cover_bucket?: string }) =>
+    request<Series>(`/series/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
   createChapter: (data: { series_id: number; number: number; title: string }) =>
     request<Chapter>("/chapters", { method: "POST", body: JSON.stringify(data) }),
 
+  updateChapter: (id: number, data: { number: number; title: string }) =>
+    request<Chapter>(`/chapters/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
   uploadChapterPages: (chapterId: number, pages: { key: string; bucket: string; page_number: number }[]) =>
     request(`/chapters/${chapterId}/pages`, { method: "POST", body: JSON.stringify({ pages }) }),
+
+  reorderChapterPages: (chapterId: number, pages: { id: number; page_number: number }[]) =>
+    request(`/chapters/${chapterId}/pages`, { method: "PUT", body: JSON.stringify({ pages }) }),
 
   deleteChapterPage: (chapterId: number, pageId: number) =>
     request(`/chapters/${chapterId}/pages/${pageId}`, { method: "DELETE" }),

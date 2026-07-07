@@ -97,6 +97,55 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(created)
 }
 
+func (h *SeriesHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req createSeriesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Title == "" || req.Slug == "" {
+		http.Error(w, "title and slug are required", http.StatusBadRequest)
+		return
+	}
+
+	status := model.SeriesStatus(req.Status)
+	if status == "" {
+		status = model.StatusOngoing
+	}
+
+	series := &model.Series{
+		ID:          uint(id),
+		Title:       req.Title,
+		Slug:        req.Slug,
+		Description: req.Description,
+		Author:      req.Author,
+		Artist:      req.Artist,
+		Status:      status,
+	}
+
+	if req.CoverKey != "" && req.CoverBucket != "" {
+		series.CoverImage = &model.S3Object{
+			Key:    req.CoverKey,
+			Bucket: req.CoverBucket,
+		}
+	}
+
+	updated, err := h.svc.UpdateSeries(r.Context(), series)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
 func (h *SeriesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 type SeriesRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Series, error)
 	Create(ctx context.Context, s *model.Series) error
+	Update(ctx context.Context, s *model.Series) error
 	List(ctx context.Context) ([]model.Series, error)
 	Delete(ctx context.Context, id uint) error
 }
@@ -40,6 +41,20 @@ func (r *seriesRepository) Create(ctx context.Context, s *model.Series) error {
 			s.CoverImageID = &s.CoverImage.ID
 		}
 		return tx.Omit("CoverImage").Create(s).Error
+	})
+}
+
+func (r *seriesRepository) Update(ctx context.Context, s *model.Series) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		cols := []string{"Title", "Slug", "Description", "Author", "Artist", "Status"}
+		if s.CoverImage != nil {
+			if err := tx.Create(s.CoverImage).Error; err != nil {
+				return err
+			}
+			s.CoverImageID = &s.CoverImage.ID
+			cols = append(cols, "CoverImageID")
+		}
+		return tx.Model(&model.Series{}).Where("id = ?", s.ID).Select(cols).Updates(s).Error
 	})
 }
 

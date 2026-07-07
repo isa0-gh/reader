@@ -10,6 +10,7 @@ import (
 type SeriesService interface {
 	GetSeries(ctx context.Context, id uint) (*model.Series, error)
 	CreateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
+	UpdateSeries(ctx context.Context, s *model.Series) (*model.Series, error)
 	ListSeries(ctx context.Context) ([]model.Series, error)
 	DeleteSeries(ctx context.Context, id uint) error
 }
@@ -29,6 +30,13 @@ func (s *seriesService) CreateSeries(ctx context.Context, series *model.Series) 
 		return nil, err
 	}
 	return series, nil
+}
+
+func (s *seriesService) UpdateSeries(ctx context.Context, series *model.Series) (*model.Series, error) {
+	if err := s.repo.Update(ctx, series); err != nil {
+		return nil, err
+	}
+	return s.repo.GetByID(ctx, series.ID)
 }
 
 func (s *seriesService) ListSeries(ctx context.Context) ([]model.Series, error) {
