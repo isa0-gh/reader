@@ -4,6 +4,7 @@ import { api, Series, Chapter } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
 import CreateChapterModal from "../components/CreateChapterModal";
+import EditSeriesModal from "../components/EditSeriesModal";
 
 const CAN_CREATE = ["uploader", "moderator", "admin"];
 const CAN_DELETE = ["moderator", "admin"];
@@ -16,6 +17,7 @@ export default function SeriesPage() {
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     api.getSeries(Number(id)).then(setSeries).catch(() => setError("Series not found."));
@@ -59,7 +61,12 @@ export default function SeriesPage() {
             <span> · {series.status}</span>
           </div>
           {series.description && <p>{series.description}</p>}
-          {canDelete && <button className="btn-outline" style={{ color: "red" }} onClick={handleDeleteSeries}>Delete Series</button>}
+          {canDelete && (
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn-outline" onClick={() => setShowEdit(true)}>Edit Series</button>
+              <button className="btn-outline" style={{ color: "red" }} onClick={handleDeleteSeries}>Delete Series</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -83,6 +90,14 @@ export default function SeriesPage() {
           seriesId={series.id}
           onClose={() => setShowCreate(false)}
           onCreate={onChapterCreated}
+        />
+      )}
+
+      {showEdit && (
+        <EditSeriesModal
+          series={series}
+          onClose={() => setShowEdit(false)}
+          onSave={(updated) => { setSeries(updated); setShowEdit(false); }}
         />
       )}
     </div>
