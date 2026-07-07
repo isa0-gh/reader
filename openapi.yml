@@ -32,6 +32,7 @@ components:
         role:        { type: string, enum: [reader, uploader, moderator, admin] }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
+        comment_suspended_until: { type: string, format: date-time, nullable: true }
 
     Series:
       type: object
@@ -73,6 +74,17 @@ components:
         key:         { type: string }
         page_number: { type: integer }
         created_at:  { type: string, format: date-time }
+
+    Comment:
+      type: object
+      properties:
+        id:          { type: integer }
+        chapter_id:  { type: integer }
+        user_id:     { type: integer }
+        user:        { $ref: "#/components/schemas/User" }
+        body:        { type: string }
+        created_at:  { type: string, format: date-time }
+        updated_at:  { type: string, format: date-time }
 
     Error:
       type: object
@@ -221,6 +233,35 @@ paths:
       responses:
         "204": { description: Role updated }
         "401": { description: Unauthorized }
+
+  /users/{id}/comment-suspension:
+    patch:
+      summary: Suspend or clear a user's commenting permission (Moderator+)
+      description: Not gated behind list-users access — moderators can moderate comments without user:list. duration accepts presets ("1h", "1d", "1y"), a custom Go duration string (e.g. "72h30m"), or "" / "none" to clear an existing suspension.
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                duration: { type: string, example: "1d" }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { description: Invalid duration }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — missing comment:suspend permission }
 
   /users/me/password:
     patch:
@@ -576,3 +617,74 @@ paths:
         "204": { description: Page deleted }
         "401": { description: Unauthorized }
         "403": { description: Forbidden — not the uploader and no blanket chapter:update permission }
+
+  /chapters/{id}/comments:
+    get:
+      summary: List comments on a chapter
+      tags: [Comments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Page of comments plus total matching count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Comment" }
+                  total: { type: integer }
+    post:
+      summary: Post a comment on a chapter
+      description: Requires comment:create (granted to every role by default) and no active commenting suspension.
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "400": { description: Empty body, forbidden, or commenting suspended }
+        "401": { description: Unauthorized }
+
+  /comments/{id}:
+    delete:
+      summary: Delete a comment (author, or Moderator+)
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Comment deleted }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — not the author and no comment:delete permission }
+        "404": { description: Comment not found }
