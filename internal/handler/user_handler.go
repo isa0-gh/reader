@@ -6,16 +6,18 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/isa0-gh/reader/internal/config"
 	"github.com/isa0-gh/reader/internal/model"
 	"github.com/isa0-gh/reader/internal/service"
 )
 
 type UserHandler struct {
 	svc service.UserService
+	cfg *config.Config
 }
 
-func NewUserHandler(svc service.UserService) *UserHandler {
-	return &UserHandler{svc: svc}
+func NewUserHandler(svc service.UserService, cfg *config.Config) *UserHandler {
+	return &UserHandler{svc: svc, cfg: cfg}
 }
 
 type RegisterRequest struct {
@@ -25,6 +27,11 @@ type RegisterRequest struct {
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.RegisterDisabled {
+		http.Error(w, "registration is disabled", http.StatusForbidden)
+		return
+	}
+
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -53,6 +60,11 @@ type LoginResponse struct {
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.cfg.LoginDisabled {
+		http.Error(w, "login is disabled", http.StatusForbidden)
+		return
+	}
+
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

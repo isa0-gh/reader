@@ -37,7 +37,7 @@ func main() {
 	// Initialize Repository, Service, and Handler
 	userRepo := repository.NewUserRepository(db)
 	userSvc := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userSvc)
+	userHandler := handler.NewUserHandler(userSvc, cfg)
 
 	// Seed first admin if no users exist
 	if err := userSvc.SeedAdmin(context.Background()); err != nil {
@@ -71,6 +71,18 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+
+	// Maintenance mode: block all API traffic except health checks and the
+	// config endpoint (frontend needs it to render the maintenance notice).
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cfg.Maintenance && r.URL.Path != "/health" && r.URL.Path != "/api/v1/config" {
+				http.Error(w, "service is under maintenance", http.StatusServiceUnavailable)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
 
 	// API Routes
 	r.Route("/api/v1", func(r chi.Router) {
@@ -112,6 +124,7 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
 			r.With(appMiddleware.RequirePermission("series:create")).Post("/series", seriesHandler.Create)
+			r.With(appMiddleware.RequirePermission("series:update")).Put("/series/{id}", seriesHandler.Update)
 			r.With(appMiddleware.RequirePermission("series:delete")).Delete("/series/{id}", seriesHandler.Delete)
 		})
 
@@ -121,7 +134,9 @@ func main() {
 			r.Group(func(r chi.Router) {
 				r.Use(appMiddleware.JWTMiddleware(userRepo))
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/", chapterHandler.Create)
+				r.With(appMiddleware.RequirePermission("chapter:update")).Put("/{id}", chapterHandler.Update)
 				r.With(appMiddleware.RequirePermission("chapter:create")).Post("/{id}/pages", chapterHandler.UploadPages)
+				r.With(appMiddleware.RequirePermission("chapter:update")).Put("/{id}/pages", chapterHandler.ReorderPages)
 				r.With(appMiddleware.RequirePermission("chapter:update")).Delete("/{id}/pages/{pageId}", chapterHandler.DeletePage)
 				r.With(appMiddleware.RequirePermission("chapter:delete")).Delete("/{id}", chapterHandler.Delete)
 			})
