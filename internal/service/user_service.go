@@ -23,6 +23,16 @@ type UserService interface {
 	UpdateRole(ctx context.Context, id uint, role model.Role) error
 	DeleteUser(ctx context.Context, id uint) error
 	SeedAdmin(ctx context.Context) error
+	// SuspendComments sets or clears a user's commenting suspension. duration
+	// is one of the presets ("1h", "1d", "1y"), a custom Go duration string
+	// (e.g. "72h30m"), or "" / "none" to clear an existing suspension.
+	SuspendComments(ctx context.Context, id uint, duration string) (*model.User, error)
+}
+
+var commentSuspensionPresets = map[string]time.Duration{
+	"1h": time.Hour,
+	"1d": 24 * time.Hour,
+	"1y": 365 * 24 * time.Hour,
 }
 
 type userService struct {
@@ -136,6 +146,32 @@ func (s *userService) UpdateRole(ctx context.Context, id uint, role model.Role) 
 
 func (s *userService) DeleteUser(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *userService) SuspendComments(ctx context.Context, id uint, duration string) (*model.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if duration == "" || duration == "none" {
+		user.CommentSuspendedUntil = nil
+	} else {
+		d, ok := commentSuspensionPresets[duration]
+		if !ok {
+			d, err = time.ParseDuration(duration)
+			if err != nil {
+				return nil, errors.New("invalid duration: use \"1h\", \"1d\", \"1y\", a custom Go duration (e.g. \"72h30m\"), or \"none\" to clear")
+			}
+		}
+		until := time.Now().Add(d)
+		user.CommentSuspendedUntil = &until
+	}
+
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (s *userService) SeedAdmin(ctx context.Context) error {
