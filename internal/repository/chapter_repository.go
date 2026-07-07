@@ -10,7 +10,9 @@ import (
 type ChapterRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Chapter, error)
 	Create(ctx context.Context, c *model.Chapter) error
+	Update(ctx context.Context, c *model.Chapter) error
 	AddPages(ctx context.Context, pages []model.S3Object) error
+	UpdatePageNumbers(ctx context.Context, chapterID uint, numbers map[uint]int) error
 	DeletePage(ctx context.Context, chapterID, pageID uint) error
 	Delete(ctx context.Context, id uint) error
 }
@@ -33,8 +35,26 @@ func (r *chapterRepository) Create(ctx context.Context, c *model.Chapter) error 
 	return r.db.WithContext(ctx).Create(c).Error
 }
 
+func (r *chapterRepository) Update(ctx context.Context, c *model.Chapter) error {
+	return r.db.WithContext(ctx).Model(&model.Chapter{}).Where("id = ?", c.ID).
+		Select("Number", "Title").Updates(c).Error
+}
+
 func (r *chapterRepository) AddPages(ctx context.Context, pages []model.S3Object) error {
 	return r.db.WithContext(ctx).Create(&pages).Error
+}
+
+func (r *chapterRepository) UpdatePageNumbers(ctx context.Context, chapterID uint, numbers map[uint]int) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for pageID, num := range numbers {
+			if err := tx.Model(&model.S3Object{}).
+				Where("id = ? AND chapter_id = ?", pageID, chapterID).
+				Update("page_number", num).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *chapterRepository) DeletePage(ctx context.Context, chapterID, pageID uint) error {

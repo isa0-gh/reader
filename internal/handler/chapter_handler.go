@@ -65,6 +65,71 @@ func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(chapter)
 }
 
+type updateChapterRequest struct {
+	Number float64 `json:"number"`
+	Title  string  `json:"title"`
+}
+
+func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req updateChapterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	chapter, err := h.svc.UpdateChapter(r.Context(), &model.Chapter{
+		ID:     uint(id),
+		Number: req.Number,
+		Title:  req.Title,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(chapter)
+}
+
+type reorderPagesRequest struct {
+	Pages []struct {
+		ID         uint `json:"id"`
+		PageNumber int  `json:"page_number"`
+	} `json:"pages"`
+}
+
+func (h *ChapterHandler) ReorderPages(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	var req reorderPagesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	numbers := make(map[uint]int, len(req.Pages))
+	for _, p := range req.Pages {
+		numbers[p.ID] = p.PageNumber
+	}
+
+	if err := h.svc.UpdatePageNumbers(r.Context(), uint(id), numbers); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 type uploadPagesRequest struct {
 	Pages []struct {
 		Key        string `json:"key"`
