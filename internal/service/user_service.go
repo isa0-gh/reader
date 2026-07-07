@@ -19,6 +19,7 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (string, *model.User, error)
 	GetUser(ctx context.Context, id uint) (*model.User, error)
 	ListUsers(ctx context.Context, limit int, after, before uint) ([]model.User, error)
+	ChangePassword(ctx context.Context, id uint, currentPassword, newPassword string) error
 	UpdateRole(ctx context.Context, id uint, role model.Role) error
 	DeleteUser(ctx context.Context, id uint) error
 	SeedAdmin(ctx context.Context) error
@@ -99,6 +100,29 @@ func (s *userService) GetUser(ctx context.Context, id uint) (*model.User, error)
 
 func (s *userService) ListUsers(ctx context.Context, limit int, after, before uint) ([]model.User, error) {
 	return s.repo.List(ctx, limit, after, before)
+}
+
+func (s *userService) ChangePassword(ctx context.Context, id uint, currentPassword, newPassword string) error {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return errors.New("current password is incorrect")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashed)
+	// Rotate JwtID so every existing session (including the one making this
+	// request) is invalidated, matching the "password change logs everyone
+	// out" behavior users expect.
+	user.JwtID = uuid.New().String()
+
+	return s.repo.Update(ctx, user)
 }
 
 func (s *userService) UpdateRole(ctx context.Context, id uint, role model.Role) error {
