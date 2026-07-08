@@ -74,6 +74,17 @@ func (f *fakeUserRepo) Count(_ context.Context) (int64, error) {
 	return int64(len(f.users)), nil
 }
 
+func (f *fakeUserRepo) SetAvatar(_ context.Context, userID uint, avatar *model.S3Object) (*model.User, error) {
+	u, ok := f.users[userID]
+	if !ok {
+		return nil, errors.New("user not found")
+	}
+	avatar.ID = 1
+	u.Avatar = avatar
+	cp := *u
+	return &cp, nil
+}
+
 func newTestUser(repo *fakeUserRepo, password string) *model.User {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	u := &model.User{Email: "a@b.com", PasswordHash: string(hash), JwtID: "original-jti"}
@@ -112,5 +123,50 @@ func TestChangePassword_Success(t *testing.T) {
 	}
 	if stored.JwtID == "original-jti" {
 		t.Error("expected JwtID to rotate on password change, invalidating existing sessions")
+	}
+}
+
+func TestChangeEmail_WrongCurrentPassword(t *testing.T) {
+	repo := newFakeUserRepo()
+	svc := NewUserService(repo)
+	u := newTestUser(repo, "correct-horse")
+
+	if _, err := svc.ChangeEmail(context.Background(), u.ID, "wrong-password", "new@b.com"); err == nil {
+		t.Fatal("expected error for wrong current password, got nil")
+	}
+
+	stored, _ := repo.GetByID(context.Background(), u.ID)
+	if stored.Email != "a@b.com" {
+		t.Error("email should be unchanged after a failed attempt")
+	}
+}
+
+func TestChangeEmail_AlreadyInUse(t *testing.T) {
+	repo := newFakeUserRepo()
+	svc := NewUserService(repo)
+	u := newTestUser(repo, "correct-horse")
+
+	other := &model.User{Email: "taken@b.com", PasswordHash: u.PasswordHash}
+	repo.Create(context.Background(), other)
+
+	if _, err := svc.ChangeEmail(context.Background(), u.ID, "correct-horse", "taken@b.com"); err == nil {
+		t.Fatal("expected error for email already in use, got nil")
+	}
+}
+
+func TestChangeEmail_Success(t *testing.T) {
+	repo := newFakeUserRepo()
+	svc := NewUserService(repo)
+	u := newTestUser(repo, "correct-horse")
+
+	updated, err := svc.ChangeEmail(context.Background(), u.ID, "correct-horse", "new@b.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Email != "new@b.com" {
+		t.Errorf("got email %q, want new@b.com", updated.Email)
+	}
+	if updated.JwtID == "original-jti" {
+		t.Error("expected JwtID to rotate on email change, invalidating existing sessions")
 	}
 }

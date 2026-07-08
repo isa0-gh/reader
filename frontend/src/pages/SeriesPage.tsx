@@ -4,6 +4,7 @@ import { api, Series, Chapter } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
 import { useConfirm } from "../ConfirmContext";
+import { useFavorites } from "../FavoritesContext";
 import CreateChapterModal from "../components/CreateChapterModal";
 import EditSeriesModal from "../components/EditSeriesModal";
 
@@ -16,6 +17,7 @@ export default function SeriesPage() {
   const { user } = useAuth();
   const { cdn_url } = useConfig();
   const confirm = useConfirm();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -60,7 +62,20 @@ export default function SeriesPage() {
           ? <img src={`${cdn_url}/${series.cover_image.key}`} alt={series.title} />
           : <div className="cover-placeholder" aria-hidden="true" />}
         <div className="series-meta">
-          <h1>{series.title}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <h1>{series.title}</h1>
+            {user && (
+              <button
+                className={"favorite-toggle" + (isFavorite(series.id) ? " favorite-toggle--active" : "")}
+                onClick={() => toggleFavorite(series.id, series)}
+                aria-pressed={isFavorite(series.id)}
+                aria-label={isFavorite(series.id) ? "Remove from favorites" : "Add to favorites"}
+                title={isFavorite(series.id) ? "Remove from favorites" : "Add to favorites"}
+              >
+                ♥
+              </button>
+            )}
+          </div>
           <div className="meta-row">
             {series.author && <span>Author: {series.author}</span>}
             {series.artist && series.artist !== series.author && <span> · Art: {series.artist}</span>}

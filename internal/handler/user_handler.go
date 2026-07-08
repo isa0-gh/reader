@@ -167,6 +167,120 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type changeEmailRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewEmail        string `json:"new_email"`
+}
+
+// PATCH /api/v1/users/me/email — self-service, same pattern as
+// ChangePassword: requires the current password since email doubles as the
+// login credential, and rotates the session id on success.
+func (h *UserHandler) ChangeEmail(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req changeEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.NewEmail == "" {
+		httpx.WriteError(w, "new_email is required", http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.svc.ChangeEmail(r.Context(), user.ID, req.CurrentPassword, req.NewEmail)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
+type updateProfileRequest struct {
+	Name string `json:"name"`
+	Bio  string `json:"bio"`
+}
+
+// UpdateProfile is self-service, same pattern as ChangePassword: acts only on
+// the caller's own account (from the JWT), no permission check.
+func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req updateProfileRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		httpx.WriteError(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.svc.UpdateProfile(r.Context(), user.ID, req.Name, req.Bio)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
+type setAvatarRequest struct {
+	Key    string `json:"key"`
+	Bucket string `json:"bucket"`
+}
+
+func (h *UserHandler) SetAvatar(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req setAvatarRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Key == "" || req.Bucket == "" {
+		httpx.WriteError(w, "key and bucket are required", http.StatusBadRequest)
+		return
+	}
+
+	updated, err := h.svc.SetAvatar(r.Context(), user.ID, req.Key, req.Bucket)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
+// ClearAvatar removes the caller's avatar, back to the initial-letter placeholder.
+func (h *UserHandler) ClearAvatar(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	updated, err := h.svc.ClearAvatar(r.Context(), user.ID)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}
+
 func (h *UserHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
 	if err != nil {

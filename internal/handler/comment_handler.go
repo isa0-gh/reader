@@ -50,6 +50,40 @@ func (h *CommentHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// MyComments lists the authenticated user's own comments, newest first, for
+// the account page's comment-history section.
+func (h *CommentHandler) MyComments(w http.ResponseWriter, r *http.Request) {
+	user, ok := r.Context().Value(appmw.UserContextKey).(*model.User)
+	if !ok {
+		httpx.WriteError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	limit := 50
+	offset := 0
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	list, total, err := h.svc.ListMyComments(r.Context(), user.ID, limit, offset)
+	if err != nil {
+		httpx.WriteError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"items": list,
+		"total": total,
+	})
+}
+
 type createCommentRequest struct {
 	Body string `json:"body"`
 }

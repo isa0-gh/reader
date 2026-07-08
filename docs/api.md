@@ -156,6 +156,71 @@ Generate a presigned S3 PUT URL for uploading files.
 
 ---
 
+## Account _(Self-service, Authenticated)_
+
+Add header: `Authorization: Bearer <token>`. These act only on the caller's own account — no admin permission required.
+
+### PATCH /users/me/password
+Change your own password. Rotates the session id server-side, invalidating all existing tokens.
+
+### PATCH /users/me/email
+Change your own email. Requires `current_password` since email doubles as the login credential. Rotates the session id server-side like the password change above.
+
+**Body**
+```json
+{ "current_password": "hunter2", "new_email": "new@example.com" }
+```
+
+### PATCH /users/me/profile
+Update your display name and bio.
+
+**Body**
+```json
+{ "name": "Jane", "bio": "Reads too much." }
+```
+
+### PATCH /users/me/avatar
+Set your profile picture, from a prior `POST /upload/presign` upload (same pattern as series cover images).
+
+**Body**
+```json
+{ "key": "avatars/123456789.png", "bucket": "my-bucket" }
+```
+
+### DELETE /users/me/avatar
+Remove your profile picture, back to the initial-letter placeholder.
+
+### GET /users/me/comments
+List your own comments, newest first. Query params: `limit`, `offset`.
+
+---
+
+## Favorites _(Authenticated)_
+
+### GET /favorites
+List your favorited series. Each entry includes the series (with cover) and last-read-chapter progress. Query params: `limit`, `offset`.
+
+### POST /favorites
+Favorite a series. Idempotent — favoriting an already-favorited series returns the existing favorite.
+
+**Body**
+```json
+{ "series_id": 1 }
+```
+
+### DELETE /favorites/{seriesId}
+Unfavorite a series.
+
+### PATCH /favorites/{seriesId}/progress
+Update last-read-chapter progress for a favorited series. Best-effort: silently no-ops if the series isn't favorited, so the frontend can call this on every chapter view without checking favorite status first.
+
+**Body**
+```json
+{ "chapter_id": 42 }
+```
+
+---
+
 ## Users _(Admin only)_
 
 Add header: `Authorization: Bearer <token>`
@@ -191,7 +256,7 @@ Suspend or clear a user's commenting permission. Not gated behind admin's `user:
 ## Admin Tools _(Admin only)_
 
 ### GET /admin/s3/orphaned
-List S3 objects that are no longer referenced by active chapters or series.
+List S3 objects that are no longer referenced by active chapters, series (covers), or users (avatars).
 
 ### DELETE /admin/s3/orphaned
 Permanently delete orphaned objects from S3 and database.

@@ -29,7 +29,7 @@ export const api = {
     request("/auth/register", { method: "POST", body: JSON.stringify({ email, password, name }) }),
 
   login: (email: string, password: string) =>
-    request<{ token: string; user: { id: number; name: string; email: string; role: string } }>(
+    request<{ token: string; user: User }>(
       "/auth/login",
       { method: "POST", body: JSON.stringify({ email, password }) }
     ),
@@ -38,6 +38,12 @@ export const api = {
     request("/users/me/password", {
       method: "PATCH",
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
+
+  changeEmail: (currentPassword: string, newEmail: string) =>
+    request<User>("/users/me/email", {
+      method: "PATCH",
+      body: JSON.stringify({ current_password: currentPassword, new_email: newEmail }),
     }),
 
   listOrphanedObjects: () =>
@@ -118,6 +124,38 @@ export const api = {
 
   suspendComments: (userId: number, duration: string) =>
     request<User>(`/users/${userId}/comment-suspension`, { method: "PATCH", body: JSON.stringify({ duration }) }),
+
+  updateProfile: (name: string, bio: string) =>
+    request<User>("/users/me/profile", { method: "PATCH", body: JSON.stringify({ name, bio }) }),
+
+  setAvatar: (key: string, bucket: string) =>
+    request<User>("/users/me/avatar", { method: "PATCH", body: JSON.stringify({ key, bucket }) }),
+
+  clearAvatar: () =>
+    request<User>("/users/me/avatar", { method: "DELETE" }),
+
+  listMyComments: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    return request<{ items: Comment[]; total: number }>(`/users/me/comments?${qs}`);
+  },
+
+  listFavorites: (params?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    return request<{ items: Favorite[]; total: number }>(`/favorites?${qs}`);
+  },
+
+  addFavorite: (seriesId: number) =>
+    request<Favorite>("/favorites", { method: "POST", body: JSON.stringify({ series_id: seriesId }) }),
+
+  removeFavorite: (seriesId: number) =>
+    request(`/favorites/${seriesId}`, { method: "DELETE" }),
+
+  updateFavoriteProgress: (seriesId: number, chapterId: number) =>
+    request(`/favorites/${seriesId}/progress`, { method: "PATCH", body: JSON.stringify({ chapter_id: chapterId }) }),
 };
 
 export async function uploadFile(file: File, prefix: string): Promise<{ key: string; bucket: string; public_url: string }> {
@@ -140,6 +178,8 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  bio?: string;
+  avatar?: S3Object | null;
   role: string;
   created_at: string;
   comment_suspended_until?: string | null;
@@ -148,8 +188,9 @@ export interface User {
 export interface Comment {
   id: number;
   chapter_id: number;
+  chapter?: { id: number; series_id: number; number: number; title: string } | null;
   user_id: number;
-  user?: { id: number; name: string; comment_suspended_until?: string | null };
+  user?: { id: number; name: string; avatar?: S3Object | null; comment_suspended_until?: string | null };
   body: string;
   created_at: string;
 }
@@ -178,4 +219,15 @@ export interface Page {
   id: number;
   key: string;
   page_number: number;
+}
+
+export interface Favorite {
+  id: number;
+  user_id: number;
+  series_id: number;
+  series?: Series;
+  last_read_chapter_id?: number | null;
+  last_read_chapter?: Chapter | null;
+  created_at: string;
+  updated_at: string;
 }

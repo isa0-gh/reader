@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}, &model.Favorite{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -78,6 +78,10 @@ func main() {
 	commentRepo := repository.NewCommentRepository(db)
 	commentSvc := service.NewCommentService(commentRepo)
 	commentHandler := handler.NewCommentHandler(commentSvc)
+
+	favoriteRepo := repository.NewFavoriteRepository(db)
+	favoriteSvc := service.NewFavoriteService(favoriteRepo)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -147,6 +151,21 @@ func main() {
 		r.Route("/users/me", func(r chi.Router) {
 			r.Use(appMiddleware.JWTMiddleware(userRepo))
 			r.Patch("/password", userHandler.ChangePassword)
+			r.Patch("/email", userHandler.ChangeEmail)
+			r.Patch("/profile", userHandler.UpdateProfile)
+			r.Patch("/avatar", userHandler.SetAvatar)
+			r.Delete("/avatar", userHandler.ClearAvatar)
+			r.Get("/comments", commentHandler.MyComments)
+		})
+
+		// Favorites: series bookmarking + per-chapter reading progress, all
+		// self-service (scoped to the caller via JWT, no permission check).
+		r.Route("/favorites", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Get("/", favoriteHandler.List)
+			r.Post("/", favoriteHandler.Add)
+			r.Delete("/{seriesId}", favoriteHandler.Remove)
+			r.Patch("/{seriesId}/progress", favoriteHandler.UpdateProgress)
 		})
 
 		// Admin: S3 cleanup (admin only)

@@ -1,7 +1,21 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { S3Object } from "./api";
 
-interface AuthUser { id: number; name: string; email: string; role: string; }
-interface AuthCtx { user: AuthUser | null; token: string | null; login(token: string, user: AuthUser): void; logout(): void; }
+interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  bio?: string;
+  avatar?: S3Object | null;
+}
+interface AuthCtx {
+  user: AuthUser | null;
+  token: string | null;
+  login(token: string, user: AuthUser): void;
+  logout(): void;
+  updateUser(patch: Partial<AuthUser>): void;
+}
 
 const Ctx = createContext<AuthCtx>(null!);
 
@@ -24,7 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null); setUser(null);
   }
 
-  return <Ctx.Provider value={{ user, token, login, logout }}>{children}</Ctx.Provider>;
+  // Patches the cached user (e.g. after editing name/bio/avatar on the
+  // account page) without a re-login round trip.
+  function updateUser(patch: Partial<AuthUser>) {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  return <Ctx.Provider value={{ user, token, login, logout, updateUser }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);

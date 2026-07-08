@@ -29,6 +29,8 @@ components:
         id:          { type: integer }
         email:       { type: string, format: email }
         name:        { type: string }
+        bio:         { type: string }
+        avatar:      { $ref: "#/components/schemas/S3Object" }
         role:        { type: string, enum: [reader, uploader, moderator, admin] }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
@@ -80,11 +82,24 @@ components:
       properties:
         id:          { type: integer }
         chapter_id:  { type: integer }
+        chapter:     { $ref: "#/components/schemas/Chapter" }
         user_id:     { type: integer }
         user:        { $ref: "#/components/schemas/User" }
         body:        { type: string }
         created_at:  { type: string, format: date-time }
         updated_at:  { type: string, format: date-time }
+
+    Favorite:
+      type: object
+      properties:
+        id:                   { type: integer }
+        user_id:               { type: integer }
+        series_id:             { type: integer }
+        series:                { $ref: "#/components/schemas/Series" }
+        last_read_chapter_id:  { type: integer, nullable: true }
+        last_read_chapter:     { $ref: "#/components/schemas/Chapter" }
+        created_at:            { type: string, format: date-time }
+        updated_at:            { type: string, format: date-time }
 
     Error:
       type: object
@@ -282,6 +297,207 @@ paths:
       responses:
         "204": { description: Password changed }
         "400": { description: Current password incorrect, or new_password missing }
+        "401": { description: Unauthorized }
+
+  /users/me/email:
+    patch:
+      summary: Change your own email
+      description: Requires the current password since email doubles as the login credential. Rotates the session id server-side, invalidating all existing tokens (including the one making this request), same as /users/me/password.
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_email]
+              properties:
+                current_password: { type: string }
+                new_email:        { type: string, format: email }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { description: Current password incorrect, new_email missing, or email already in use }
+        "401": { description: Unauthorized }
+
+  /users/me/profile:
+    patch:
+      summary: Update your own display name and bio
+      description: Self-service, same as /users/me/password — acts only on the caller's own account.
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                bio:  { type: string }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { description: name is required }
+        "401": { description: Unauthorized }
+
+  /users/me/avatar:
+    patch:
+      summary: Set your own profile picture
+      description: Body is a key/bucket pair from a prior POST /upload/presign upload, same pattern as series cover images.
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, bucket]
+              properties:
+                key:    { type: string }
+                bucket: { type: string }
+      responses:
+        "200":
+          description: Updated user with new avatar
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { description: key and bucket are required }
+        "401": { description: Unauthorized }
+    delete:
+      summary: Remove your own profile picture
+      description: Back to the initial-letter placeholder. Leaves the old S3 object for the admin S3 cleanup tool to catch, same as replacing a series cover.
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Updated user with avatar cleared
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { description: Unauthorized }
+
+  /users/me/comments:
+    get:
+      summary: List your own comments, newest first
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Page of your comments plus total matching count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Comment" }
+                  total: { type: integer }
+        "401": { description: Unauthorized }
+
+  /favorites:
+    get:
+      summary: List your favorited series
+      description: Each favorite includes its series (with cover) and last-read-chapter progress.
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Page of favorites plus total matching count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Favorite" }
+                  total: { type: integer }
+        "401": { description: Unauthorized }
+    post:
+      summary: Favorite a series
+      description: Idempotent — favoriting an already-favorited series returns the existing favorite instead of erroring.
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [series_id]
+              properties:
+                series_id: { type: integer }
+      responses:
+        "201":
+          description: Favorite created (or already existed)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Favorite" }
+        "400": { description: series_id is required }
+        "401": { description: Unauthorized }
+
+  /favorites/{seriesId}:
+    delete:
+      summary: Unfavorite a series
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: seriesId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Favorite removed }
+        "401": { description: Unauthorized }
+
+  /favorites/{seriesId}/progress:
+    patch:
+      summary: Update last-read-chapter progress for a favorited series
+      description: Best-effort — silently no-ops (204) if the series isn't favorited, so the frontend can call this on every chapter view without checking favorite status first.
+      tags: [Favorites]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: seriesId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chapter_id]
+              properties:
+                chapter_id: { type: integer }
+      responses:
+        "204": { description: Progress updated (or silently no-op) }
+        "400": { description: chapter_id is required }
         "401": { description: Unauthorized }
 
   /admin/s3/orphaned:

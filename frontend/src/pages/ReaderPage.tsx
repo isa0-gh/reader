@@ -7,6 +7,7 @@ import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
 import { useToast } from "../ToastContext";
 import { useConfirm } from "../ConfirmContext";
+import { useFavorites } from "../FavoritesContext";
 import CommentItem from "../components/CommentItem";
 
 const CAN_CREATE = ["uploader", "moderator", "admin"];
@@ -19,6 +20,7 @@ export default function ReaderPage() {
   const { cdn_url } = useConfig();
   const toast = useToast();
   const confirm = useConfirm();
+  const { pingProgress } = useFavorites();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
@@ -27,7 +29,13 @@ export default function ReaderPage() {
   const [commentError, setCommentError] = useState("");
 
   useEffect(() => {
-    api.getChapter(Number(chapterId)).then(setChapter).catch(() => setError("Chapter not found."));
+    api.getChapter(Number(chapterId)).then((c) => {
+      setChapter(c);
+      pingProgress(c.series_id, c);
+    }).catch(() => setError("Chapter not found."));
+    // pingProgress is stable enough for this purpose; re-running it on every
+    // favorites-state change would re-fire the ping needlessly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterId]);
 
   useEffect(() => {

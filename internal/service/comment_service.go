@@ -12,6 +12,7 @@ import (
 
 type CommentService interface {
 	ListComments(ctx context.Context, chapterID uint, limit, offset int) ([]model.Comment, int64, error)
+	ListMyComments(ctx context.Context, userID uint, limit, offset int) ([]model.Comment, int64, error)
 	CreateComment(ctx context.Context, chapterID uint, author *model.User, body string) (*model.Comment, error)
 	GetComment(ctx context.Context, id uint) (*model.Comment, error)
 	DeleteComment(ctx context.Context, id uint) error
@@ -29,6 +30,18 @@ func (s *commentService) ListComments(ctx context.Context, chapterID uint, limit
 		return nil, 0, err
 	}
 	total, err := s.repo.CountByChapter(ctx, chapterID)
+	if err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
+func (s *commentService) ListMyComments(ctx context.Context, userID uint, limit, offset int) ([]model.Comment, int64, error) {
+	list, err := s.repo.ListByUser(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.repo.CountByUser(ctx, userID)
 	if err != nil {
 		return nil, 0, err
 	}

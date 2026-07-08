@@ -12,6 +12,8 @@ type CommentRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Comment, error)
 	ListByChapter(ctx context.Context, chapterID uint, limit, offset int) ([]model.Comment, error)
 	CountByChapter(ctx context.Context, chapterID uint) (int64, error)
+	ListByUser(ctx context.Context, userID uint, limit, offset int) ([]model.Comment, error)
+	CountByUser(ctx context.Context, userID uint) (int64, error)
 	Delete(ctx context.Context, id uint) error
 }
 
@@ -35,7 +37,7 @@ func (r *commentRepository) GetByID(ctx context.Context, id uint) (*model.Commen
 
 func (r *commentRepository) ListByChapter(ctx context.Context, chapterID uint, limit, offset int) ([]model.Comment, error) {
 	var list []model.Comment
-	query := r.db.WithContext(ctx).Preload("User").Where("chapter_id = ?", chapterID).Order("created_at asc")
+	query := r.db.WithContext(ctx).Preload("User").Preload("User.Avatar").Where("chapter_id = ?", chapterID).Order("created_at asc")
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -51,6 +53,26 @@ func (r *commentRepository) ListByChapter(ctx context.Context, chapterID uint, l
 func (r *commentRepository) CountByChapter(ctx context.Context, chapterID uint) (int64, error) {
 	var count int64
 	return count, r.db.WithContext(ctx).Model(&model.Comment{}).Where("chapter_id = ?", chapterID).Count(&count).Error
+}
+
+func (r *commentRepository) ListByUser(ctx context.Context, userID uint, limit, offset int) ([]model.Comment, error) {
+	var list []model.Comment
+	query := r.db.WithContext(ctx).Preload("Chapter").Where("user_id = ?", userID).Order("created_at desc")
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	if err := query.Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (r *commentRepository) CountByUser(ctx context.Context, userID uint) (int64, error) {
+	var count int64
+	return count, r.db.WithContext(ctx).Model(&model.Comment{}).Where("user_id = ?", userID).Count(&count).Error
 }
 
 func (r *commentRepository) Delete(ctx context.Context, id uint) error {
