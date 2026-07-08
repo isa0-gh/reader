@@ -1,4 +1,5 @@
 import { useState, ChangeEvent } from "react";
+import { PiArrowUp, PiArrowDown, PiX } from "react-icons/pi";
 import Modal from "../Modal";
 import { api, uploadFile } from "../api";
 
@@ -82,9 +83,9 @@ export default function UploadPagesModal({ chapterId, onClose, onDone }: { chapt
                   onChange={ev => setPage(i, ev.target.value)}
                   className="page-row-num"
                 />
-                <button onClick={() => moveUp(i)} disabled={i === 0} className="page-row-btn">↑</button>
-                <button onClick={() => moveDown(i)} disabled={i === entries.length - 1} className="page-row-btn">↓</button>
-                <button onClick={() => remove(i)} className="page-row-btn page-row-btn--danger">✕</button>
+                <button onClick={() => moveUp(i)} disabled={i === 0} className="page-row-btn" aria-label="Move up"><PiArrowUp /></button>
+                <button onClick={() => moveDown(i)} disabled={i === entries.length - 1} className="page-row-btn" aria-label="Move down"><PiArrowDown /></button>
+                <button onClick={() => remove(i)} className="page-row-btn page-row-btn--danger" aria-label="Remove"><PiX /></button>
               </div>
             ))}
           </div>

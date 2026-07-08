@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PiTrash, PiCheckCircle, PiXCircle } from "react-icons/pi";
 import { api, S3Object } from "../api";
 import { useConfirm } from "../ConfirmContext";
 
@@ -57,17 +58,21 @@ export default function AdminS3CleanPage() {
           </div>
           <button className="btn-outline" onClick={handlePurge} disabled={loading}
             style={{ color: "var(--danger)", borderColor: "var(--danger)", width: "auto" }}>
-            {loading ? "Purging…" : `Purge ${objects.length} object(s)`}
+            <PiTrash /> {loading ? "Purging…" : `Purge ${objects.length} object(s)`}
           </button>
         </>
       )}
 
       {result && (
         <div className="admin-result">
-          <p>✓ Deleted from S3 and DB: {result.deleted?.length ?? 0}</p>
+          <p style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <PiCheckCircle style={{ color: "#2f9e44" }} /> Deleted from S3 and DB: {result.deleted?.length ?? 0}
+          </p>
           {result.failed?.length > 0 && (
             <div className="fail-list">
-              <p>✗ Failed ({result.failed.length}) — DB rows kept. Check server logs.</p>
+              <p style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                <PiXCircle /> Failed ({result.failed.length}) — DB rows kept. Check server logs.
+              </p>
               <ul>{result.failed.map((k) => <li key={k}>{k}</li>)}</ul>
             </div>
           )}

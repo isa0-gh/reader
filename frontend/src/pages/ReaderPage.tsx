@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { PiArrowLeft, PiCaretLeft, PiCaretRight, PiPencilSimple } from "react-icons/pi";
 import { api, Chapter, Comment, Series } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
@@ -89,12 +90,12 @@ export default function ReaderPage() {
   return (
     <>
       <div className="reader-nav">
-        <button onClick={() => nav(`/series/${seriesId}`)}>← Back</button>
+        <button onClick={() => nav(`/series/${seriesId}`)}><PiArrowLeft /> Back</button>
         <span>Ch. {chapter.number}{chapter.title ? ` — ${chapter.title}` : ""}</span>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          {canEdit && <button onClick={() => nav(`/series/${seriesId}/${chapterId}/edit`)}>Edit</button>}
-          <button disabled={!prevId} onClick={() => prevId && nav(`/series/${seriesId}/${prevId}`)}>Prev</button>
-          <button disabled={!nextId} onClick={() => nextId && nav(`/series/${seriesId}/${nextId}`)}>Next</button>
+          {canEdit && <button onClick={() => nav(`/series/${seriesId}/${chapterId}/edit`)}><PiPencilSimple /> Edit</button>}
+          <button disabled={!prevId} onClick={() => prevId && nav(`/series/${seriesId}/${prevId}`)}><PiCaretLeft /> Prev</button>
+          <button disabled={!nextId} onClick={() => nextId && nav(`/series/${seriesId}/${nextId}`)}>Next <PiCaretRight /></button>
         </div>
       </div>
 

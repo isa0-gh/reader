@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { PiHeart, PiHeartFill, PiPencilSimple, PiTrash, PiPlus } from "react-icons/pi";
 import { api, Series, Chapter } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
@@ -72,7 +73,7 @@ export default function SeriesPage() {
                 aria-label={isFavorite(series.id) ? "Remove from favorites" : "Add to favorites"}
                 title={isFavorite(series.id) ? "Remove from favorites" : "Add to favorites"}
               >
-                ♥
+                {isFavorite(series.id) ? <PiHeartFill /> : <PiHeart />}
               </button>
             )}
           </div>
@@ -84,8 +85,8 @@ export default function SeriesPage() {
           {series.description && <p>{series.description}</p>}
           {canDelete && (
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button className="btn-outline" onClick={() => setShowEdit(true)}>Edit Series</button>
-              <button className="btn-outline" style={{ color: "red" }} onClick={handleDeleteSeries}>Delete Series</button>
+              <button className="btn-outline" onClick={() => setShowEdit(true)}><PiPencilSimple /> Edit Series</button>
+              <button className="btn-outline" style={{ color: "var(--danger)" }} onClick={handleDeleteSeries}><PiTrash /> Delete Series</button>
             </div>
           )}
         </div>
@@ -94,14 +95,14 @@ export default function SeriesPage() {
       <div className="chapter-list">
         <div className="chapter-list-header">
           <h2>Chapters ({chapters.length})</h2>
-          {canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}>+ New Chapter</button>}
+          {canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}><PiPlus /> New Chapter</button>}
         </div>
         {chapters.map((ch) => (
           <div key={ch.id} className="chapter-item" role="button" tabIndex={0}
             onClick={() => nav(`/series/${series.id}/${ch.id}`)}
             onKeyDown={(e) => e.key === "Enter" && nav(`/series/${series.id}/${ch.id}`)}>
             <span className="ch-num">Ch. {ch.number}{ch.title ? ` — ${ch.title}` : ""}</span>
-            {canDelete && <button className="btn-outline" style={{ color: "red" }} onClick={(e) => handleDeleteChapter(e, ch.id)}>Delete</button>}
+            {canDelete && <button className="btn-outline" style={{ color: "var(--danger)" }} onClick={(e) => handleDeleteChapter(e, ch.id)}><PiTrash /> Delete</button>}
           </div>
         ))}
       </div>

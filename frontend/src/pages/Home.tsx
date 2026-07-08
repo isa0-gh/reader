@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { PiPlus, PiMagnifyingGlass } from "react-icons/pi";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
 import { useFavorites } from "../FavoritesContext";
@@ -46,7 +47,7 @@ export default function Home() {
     <div className="container">
       <div className="page-header">
         <p className="page-title">{tab === "browse" ? "Browse" : "My Favorites"}</p>
-        {tab === "browse" && canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}>+ New Series</button>}
+        {tab === "browse" && canCreate && <button className="btn-outline" onClick={() => setShowCreate(true)}><PiPlus /> New Series</button>}
       </div>
 
       {user && (
@@ -60,12 +61,15 @@ export default function Home() {
 
       {tab === "browse" ? (
         <>
-          <input
-            className="search-input"
-            placeholder="Search by title…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="search-input-wrap">
+            <PiMagnifyingGlass className="search-input-icon" aria-hidden="true" />
+            <input
+              className="search-input"
+              placeholder="Search by title…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
 
           {loading ? (
             <p className="muted">Loading…</p>
