@@ -1,6 +1,8 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./AuthContext";
 import { ConfigProvider } from "./ConfigContext";
+import { ToastProvider } from "./ToastContext";
+import { ConfirmProvider } from "./ConfirmContext";
 import Nav from "./Nav";
 import Home from "./pages/Home";
 import SeriesPage from "./pages/SeriesPage";
@@ -10,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AccountPage from "./pages/AccountPage";
 
+import AdminLayout from "./pages/AdminLayout";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminS3CleanPage from "./pages/AdminS3CleanPage";
 
@@ -17,18 +20,25 @@ export default function App() {
   return (
     <ConfigProvider>
       <AuthProvider>
-        <Nav />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/series/:id" element={<SeriesPage />} />
-          <Route path="/series/:id/:chapterId" element={<ReaderPage />} />
-          <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/account" element={<AccountPage />} />
-          <Route path="/admin/users" element={<AdminUsersPage />} />
-          <Route path="/admin/s3" element={<AdminS3CleanPage />} />
-        </Routes>
+        <ToastProvider>
+          <ConfirmProvider>
+            <Nav />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/series/:id" element={<SeriesPage />} />
+              <Route path="/series/:id/:chapterId" element={<ReaderPage />} />
+              <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Navigate to="users" replace />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="s3" element={<AdminS3CleanPage />} />
+              </Route>
+            </Routes>
+          </ConfirmProvider>
+        </ToastProvider>
       </AuthProvider>
     </ConfigProvider>
   );

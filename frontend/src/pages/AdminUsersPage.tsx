@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { api, User } from "../api";
 import { useAuth } from "../AuthContext";
-import "../admin.css";
+import { useToast } from "../ToastContext";
+import { useConfirm } from "../ConfirmContext";
 
 const PAGE_SIZE = 50;
 const ROLES = ["reader", "uploader", "moderator", "admin"];
 
 export default function AdminUsersPage() {
   const { user: me } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [cursor, setCursor] = useState<number | undefined>();
   const [history, setHistory] = useState<number[]>([]);
@@ -41,53 +44,58 @@ export default function AdminUsersPage() {
     try {
       await api.updateUserRole(id, role);
       setUsers((u) => u.map((x) => x.id === id ? { ...x, role } : x));
-    } catch (e: any) { alert(e.message); }
+      toast.show("Role updated.", "success");
+    } catch (e: any) { toast.show(e.message, "error"); }
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this user?")) return;
+    const ok = await confirm("Delete this user? This can't be undone.", { danger: true });
+    if (!ok) return;
     try {
       await api.deleteUser(id);
       setUsers((u) => u.filter((x) => x.id !== id));
-    } catch (e: any) { alert(e.message); }
+      toast.show("User deleted.", "success");
+    } catch (e: any) { toast.show(e.message, "error"); }
   }
 
   if (error) return <p className="error">{error}</p>;
 
   return (
-    <main className="admin-page">
+    <>
       <h2>Users</h2>
-      <table className="admin-table">
-        <thead>
-          <tr>{["ID", "Name", "Email", "Role", "Created", ""].map((h, i) => <th key={i}>{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.id}</td>
-              <td>{u.name}</td>
-              <td>{u.email}</td>
-              <td>
-                <select className="role-select" value={u.role} disabled={u.id === me?.id}
-                  onChange={(e) => handleRoleChange(u.id, e.target.value)}>
-                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </td>
-              <td>{new Date(u.created_at).toLocaleDateString()}</td>
-              <td>
-                <button className="btn-outline" style={{ color: "var(--danger)" }}
-                  disabled={u.id === me?.id} onClick={() => handleDelete(u.id)}>
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="table-scroll">
+        <table className="admin-table">
+          <thead>
+            <tr>{["ID", "Name", "Email", "Role", "Created", ""].map((h, i) => <th key={i}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+                <td>
+                  <select className="role-select" value={u.role} disabled={u.id === me?.id}
+                    onChange={(e) => handleRoleChange(u.id, e.target.value)}>
+                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </td>
+                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td>
+                  <button className="btn-outline" style={{ color: "var(--danger)" }}
+                    disabled={u.id === me?.id} onClick={() => handleDelete(u.id)}>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="admin-pagination">
         <button className="btn-outline" onClick={prev} disabled={!history.length}>← Prev</button>
         <button className="btn-outline" onClick={next} disabled={users.length < PAGE_SIZE}>Next →</button>
       </div>
-    </main>
+    </>
   );
 }

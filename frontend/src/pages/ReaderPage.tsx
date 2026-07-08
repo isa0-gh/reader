@@ -5,6 +5,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api, Chapter, Comment, Series } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
+import { useToast } from "../ToastContext";
+import { useConfirm } from "../ConfirmContext";
 import CommentItem from "../components/CommentItem";
 
 const CAN_CREATE = ["uploader", "moderator", "admin"];
@@ -15,6 +17,8 @@ export default function ReaderPage() {
   const nav = useNavigate();
   const { user } = useAuth();
   const { cdn_url } = useConfig();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
@@ -47,18 +51,20 @@ export default function ReaderPage() {
   }
 
   async function handleDeleteComment(id: number) {
-    if (!confirm("Delete this comment?")) return;
+    const ok = await confirm("Delete this comment?", { danger: true });
+    if (!ok) return;
     try {
       await api.deleteComment(id);
       setComments((cs) => cs.filter((c) => c.id !== id));
-    } catch (e: any) { alert(e.message); }
+      toast.show("Comment deleted.", "success");
+    } catch (e: any) { toast.show(e.message, "error"); }
   }
 
   async function handleSuspend(userId: number, duration: string) {
     try {
       await api.suspendComments(userId, duration);
-      alert(duration && duration !== "none" ? `Commenting suspended for ${duration}.` : "Suspension cleared.");
-    } catch (e: any) { alert(e.message); }
+      toast.show(duration && duration !== "none" ? "Commenting suspended." : "Suspension cleared.", "success");
+    } catch (e: any) { toast.show(e.message, "error"); }
   }
 
   if (error) return <div className="container muted">{error}</div>;

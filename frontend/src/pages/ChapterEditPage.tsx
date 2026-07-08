@@ -2,6 +2,7 @@ import { useEffect, useState, ChangeEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, Chapter, Page, uploadFile } from "../api";
 import { useConfig } from "../ConfigContext";
+import { useConfirm } from "../ConfirmContext";
 
 interface FileEntry { file: File; pageNumber: number; preview: string; }
 
@@ -9,6 +10,7 @@ export default function ChapterEditPage() {
   const { id: seriesId, chapterId } = useParams<{ id: string; chapterId: string }>();
   const nav = useNavigate();
   const { cdn_url } = useConfig();
+  const confirm = useConfirm();
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [initialPages, setInitialPages] = useState<Page[]>([]);
   const [newFiles, setNewFiles] = useState<FileEntry[]>([]);
@@ -122,7 +124,8 @@ export default function ChapterEditPage() {
   }
 
   async function deleteExisting(page: Page) {
-    if (!confirm(`Delete page ${page.page_number}?`)) return;
+    const ok = await confirm(`Delete page ${page.page_number}?`, { danger: true });
+    if (!ok) return;
     try {
       await api.deleteChapterPage(Number(chapterId), page.id);
       setChapter(prev => prev ? { ...prev, pages: prev.pages.filter(p => p.id !== page.id) } : prev);
@@ -174,24 +177,26 @@ export default function ChapterEditPage() {
 
   return (
     <div className="container">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.3rem", margin: 0 }}>Edit Ch. {chapter.number}</h1>
+      <div className="page-header">
+        <h1 className="page-title">Edit Ch. {chapter.number}</h1>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button className="btn-outline" onClick={() => nav(`/series/${seriesId}/${chapterId}`)}>View</button>
           <button className="btn-outline" onClick={() => nav(`/series/${seriesId}`)}>← Back</button>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end", marginBottom: "2rem" }}>
-        <div className="form-group" style={{ margin: 0 }}>
+      <div className="form-row" style={{ alignItems: "flex-end", marginBottom: "2rem" }}>
+        <div className="form-group" style={{ flex: "0 0 90px" }}>
           <label>Number</label>
-          <input type="number" step="any" value={chNumber} onChange={e => setChNumber(e.target.value)} style={inputStyle} />
+          <input type="number" step="any" value={chNumber} onChange={e => setChNumber(e.target.value)} />
         </div>
-        <div className="form-group" style={{ margin: 0, flex: 1 }}>
+        <div className="form-group" style={{ flex: 1 }}>
           <label>Title</label>
-          <input value={chTitle} onChange={e => setChTitle(e.target.value)} style={{ width: "100%", padding: "0.25rem 0.4rem", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.85rem" }} />
+          <input value={chTitle} onChange={e => setChTitle(e.target.value)} />
         </div>
-        <button className="btn-outline" onClick={saveInfo} disabled={savingInfo}>{savingInfo ? "Saving…" : "Save Info"}</button>
+        <button className="btn-outline" onClick={saveInfo} disabled={savingInfo} style={{ marginBottom: "1rem" }}>
+          {savingInfo ? "Saving…" : "Save Info"}
+        </button>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
@@ -202,13 +207,13 @@ export default function ChapterEditPage() {
         {pages.length === 0
           ? <div className="muted">No pages yet.</div>
           : pages.map((p, i) => (
-          <div key={p.id} style={rowStyle}>
-            <img src={`${cdn_url}/${p.key}`} style={thumbStyle} />
-            <span style={{ flex: 1, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis" }}>{p.key.split("/").pop()}</span>
-            <input type="number" min={1} value={p.page_number} onChange={e => setPageNum(i, e.target.value, false)} style={inputStyle} />
-            <button onClick={() => moveUp(i, false)} disabled={i === 0} style={btnStyle}>↑</button>
-            <button onClick={() => moveDown(i, false)} disabled={i === pages.length - 1} style={btnStyle}>↓</button>
-            <button onClick={() => deleteExisting(p)} style={{ ...btnStyle, color: "#c00" }}>✕</button>
+          <div key={p.id} className="page-row">
+            <img src={`${cdn_url}/${p.key}`} className="page-row-thumb" />
+            <span className="page-row-name">{p.key.split("/").pop()}</span>
+            <input type="number" min={1} value={p.page_number} onChange={e => setPageNum(i, e.target.value, false)} className="page-row-num" />
+            <button onClick={() => moveUp(i, false)} disabled={i === 0} className="page-row-btn">↑</button>
+            <button onClick={() => moveDown(i, false)} disabled={i === pages.length - 1} className="page-row-btn">↓</button>
+            <button onClick={() => deleteExisting(p)} className="page-row-btn page-row-btn--danger">✕</button>
           </div>
         ))}
       </div>
@@ -218,13 +223,13 @@ export default function ChapterEditPage() {
       {newFiles.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
           {newFiles.map((e, i) => (
-            <div key={e.preview} style={rowStyle}>
-              <img src={e.preview} style={thumbStyle} />
-              <span style={{ flex: 1, fontSize: "0.85rem", overflow: "hidden", textOverflow: "ellipsis" }}>{e.file.name}</span>
-              <input type="number" min={1} value={e.pageNumber} onChange={ev => setPageNum(i, ev.target.value, true)} style={inputStyle} />
-              <button onClick={() => moveUp(i, true)} disabled={i === 0} style={btnStyle}>↑</button>
-              <button onClick={() => moveDown(i, true)} disabled={i === newFiles.length - 1} style={btnStyle}>↓</button>
-              <button onClick={() => removeNew(i)} style={{ ...btnStyle, color: "#c00" }}>✕</button>
+            <div key={e.preview} className="page-row">
+              <img src={e.preview} className="page-row-thumb" />
+              <span className="page-row-name">{e.file.name}</span>
+              <input type="number" min={1} value={e.pageNumber} onChange={ev => setPageNum(i, ev.target.value, true)} className="page-row-num" />
+              <button onClick={() => moveUp(i, true)} disabled={i === 0} className="page-row-btn">↑</button>
+              <button onClick={() => moveDown(i, true)} disabled={i === newFiles.length - 1} className="page-row-btn">↓</button>
+              <button onClick={() => removeNew(i)} className="page-row-btn page-row-btn--danger">✕</button>
             </div>
           ))}
         </div>
@@ -238,22 +243,3 @@ export default function ChapterEditPage() {
     </div>
   );
 }
-
-const rowStyle: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: "0.5rem",
-  borderBottom: "1px solid var(--border)", paddingBottom: "0.5rem",
-};
-
-const thumbStyle: React.CSSProperties = {
-  width: 40, height: 54, objectFit: "cover", borderRadius: 3, flexShrink: 0,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: 50, padding: "0.25rem 0.4rem", border: "1px solid var(--border)",
-  borderRadius: 3, fontSize: "0.85rem",
-};
-
-const btnStyle: React.CSSProperties = {
-  background: "none", border: "1px solid var(--border)", borderRadius: 3,
-  cursor: "pointer", padding: "0.2rem 0.4rem", fontSize: "0.85rem",
-};

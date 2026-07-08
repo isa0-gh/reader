@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Comment } from "../api";
+import Modal from "../Modal";
 
-const SUSPEND_PRESETS: [string, string][] = [
-  ["1h", "Suspend 1 hour"],
-  ["1d", "Suspend 1 day"],
-  ["1y", "Suspend 1 year"],
+const CUSTOM_UNITS: [string, number][] = [
+  ["Hours", 1],
+  ["Days", 24],
+  ["Weeks", 24 * 7],
 ];
 
 export default function CommentItem({
@@ -17,8 +18,13 @@ export default function CommentItem({
   onSuspend(userId: number, duration: string): void;
 }) {
   const [open, setOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [amount, setAmount] = useState(3);
+  const [unitHours, setUnitHours] = useState(24);
   const ref = useRef<HTMLDivElement>(null);
   const name = comment.user?.name ?? `User #${comment.user_id}`;
+  const suspendedUntil = comment.user?.comment_suspended_until;
+  const isSuspended = !!suspendedUntil && new Date(suspendedUntil) > new Date();
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -31,6 +37,12 @@ export default function CommentItem({
   function act(fn: () => void) {
     fn();
     setOpen(false);
+  }
+
+  function submitCustom(e: React.FormEvent) {
+    e.preventDefault();
+    if (amount > 0) onSuspend(comment.user_id, `${Math.round(amount * unitHours)}h`);
+    setCustomOpen(false);
   }
 
   const hasMenu = canDelete || canModerate;
@@ -65,45 +77,67 @@ export default function CommentItem({
                   onClick={() => act(() => onDelete(comment.id))}
                   role="menuitem"
                 >
-                  Delete
+                  Delete comment
                 </button>
               )}
               {canDelete && canModerate && <div className="dropdown-divider" />}
               {canModerate && (
                 <>
-                  <div className="dropdown-label">Suspend commenting</div>
-                  {SUSPEND_PRESETS.map(([value, label]) => (
+                  <div className="dropdown-label">Commenting</div>
+                  {isSuspended && (
+                    <div className="dropdown-status">
+                      Suspended until {new Date(suspendedUntil!).toLocaleString()}
+                    </div>
+                  )}
+                  <button
+                    className="dropdown-item"
+                    onClick={() => act(() => setCustomOpen(true))}
+                    role="menuitem"
+                  >
+                    Suspend…
+                  </button>
+                  {isSuspended && (
                     <button
-                      key={value}
                       className="dropdown-item"
-                      onClick={() => act(() => onSuspend(comment.user_id, value))}
+                      onClick={() => act(() => onSuspend(comment.user_id, "none"))}
                       role="menuitem"
                     >
-                      {label}
+                      Remove suspension
                     </button>
-                  ))}
-                  <button
-                    className="dropdown-item"
-                    onClick={() => act(() => {
-                      const d = prompt("Custom duration (Go duration syntax, e.g. 72h30m):");
-                      if (d) onSuspend(comment.user_id, d);
-                    })}
-                    role="menuitem"
-                  >
-                    Custom duration…
-                  </button>
-                  <button
-                    className="dropdown-item"
-                    onClick={() => act(() => onSuspend(comment.user_id, "none"))}
-                    role="menuitem"
-                  >
-                    Remove suspension
-                  </button>
+                  )}
                 </>
               )}
             </div>
           )}
         </div>
+      )}
+
+      {customOpen && (
+        <Modal title={`Suspend ${name}`} onClose={() => setCustomOpen(false)}>
+          <form onSubmit={submitCustom} className="modal-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Amount</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={amount}
+                  onChange={(e) => setAmount(parseInt(e.target.value) || 1)}
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Unit</label>
+                <select value={unitHours} onChange={(e) => setUnitHours(Number(e.target.value))}>
+                  {CUSTOM_UNITS.map(([label, hours]) => (
+                    <option key={label} value={hours}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button className="btn" type="submit">Suspend commenting</button>
+          </form>
+        </Modal>
       )}
     </div>
   );

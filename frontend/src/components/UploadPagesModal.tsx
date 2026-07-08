@@ -72,19 +72,19 @@ export default function UploadPagesModal({ chapterId, onClose, onDone }: { chapt
         </div>
 
         {entries.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "1rem", maxHeight: "340px", overflowY: "auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem", maxHeight: "340px", overflowY: "auto" }}>
             {entries.map((e, i) => (
-              <div key={e.preview} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", borderBottom: "1px solid var(--border)", paddingBottom: "0.4rem" }}>
-                <img src={e.preview} style={{ width: 36, height: 48, objectFit: "cover", borderRadius: 2, flexShrink: 0 }} />
-                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.file.name}</span>
+              <div key={e.preview} className="page-row">
+                <img src={e.preview} className="page-row-thumb" />
+                <span className="page-row-name">{e.file.name}</span>
                 <input
                   type="number" min={1} value={e.pageNumber}
                   onChange={ev => setPage(i, ev.target.value)}
-                  style={{ width: 48, padding: "0.2rem 0.3rem", border: "1px solid var(--border)", borderRadius: 3, fontSize: "0.8rem" }}
+                  className="page-row-num"
                 />
-                <button onClick={() => moveUp(i)} disabled={i === 0} style={btnStyle}>↑</button>
-                <button onClick={() => moveDown(i)} disabled={i === entries.length - 1} style={btnStyle}>↓</button>
-                <button onClick={() => remove(i)} style={{ ...btnStyle, color: "#c00" }}>✕</button>
+                <button onClick={() => moveUp(i)} disabled={i === 0} className="page-row-btn">↑</button>
+                <button onClick={() => moveDown(i)} disabled={i === entries.length - 1} className="page-row-btn">↓</button>
+                <button onClick={() => remove(i)} className="page-row-btn page-row-btn--danger">✕</button>
               </div>
             ))}
           </div>
@@ -99,8 +99,3 @@ export default function UploadPagesModal({ chapterId, onClose, onDone }: { chapt
     </Modal>
   );
 }
-
-const btnStyle: React.CSSProperties = {
-  background: "none", border: "1px solid var(--border)", borderRadius: 3,
-  cursor: "pointer", padding: "0.1rem 0.35rem", fontSize: "0.8rem",
-};
