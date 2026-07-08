@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api, Series, Chapter } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
+import { useConfirm } from "../ConfirmContext";
 import CreateChapterModal from "../components/CreateChapterModal";
 import EditSeriesModal from "../components/EditSeriesModal";
 
@@ -14,6 +15,7 @@ export default function SeriesPage() {
   const nav = useNavigate();
   const { user } = useAuth();
   const { cdn_url } = useConfig();
+  const confirm = useConfirm();
   const [series, setSeries] = useState<Series | null>(null);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -31,14 +33,16 @@ export default function SeriesPage() {
   const canDelete = user && CAN_DELETE.includes(user.role);
 
   async function handleDeleteSeries() {
-    if (!confirm("Delete this series?")) return;
+    const ok = await confirm("Delete this series? All its chapters go with it.", { danger: true });
+    if (!ok) return;
     await api.deleteSeries(series!.id);
     nav("/");
   }
 
   async function handleDeleteChapter(e: React.MouseEvent, chId: number) {
     e.stopPropagation();
-    if (!confirm("Delete this chapter?")) return;
+    const ok = await confirm("Delete this chapter?", { danger: true });
+    if (!ok) return;
     await api.deleteChapter(chId);
     setSeries((prev) => prev ? { ...prev, chapters: prev.chapters.filter((c) => c.id !== chId) } : prev);
   }
@@ -52,7 +56,9 @@ export default function SeriesPage() {
   return (
     <div className="container">
       <div className="series-detail">
-        <img src={series.cover_image ? `${cdn_url}/${series.cover_image.key}` : ""} alt={series.title} />
+        {series.cover_image
+          ? <img src={`${cdn_url}/${series.cover_image.key}`} alt={series.title} />
+          : <div className="cover-placeholder" aria-hidden="true" />}
         <div className="series-meta">
           <h1>{series.title}</h1>
           <div className="meta-row">

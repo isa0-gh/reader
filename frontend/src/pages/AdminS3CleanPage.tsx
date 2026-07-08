@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { api, S3Object } from "../api";
-import "../admin.css";
+import { useConfirm } from "../ConfirmContext";
 
 export default function AdminS3CleanPage() {
+  const confirm = useConfirm();
   const [objects, setObjects] = useState<S3Object[]>([]);
   const [result, setResult] = useState<{ deleted: string[]; failed: string[] } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,8 @@ export default function AdminS3CleanPage() {
   useEffect(() => { load(); }, []);
 
   async function handlePurge() {
-    if (!confirm(`Delete ${objects.length} orphaned object(s) from S3?`)) return;
+    const ok = await confirm(`Delete ${objects.length} orphaned object(s) from S3? This can't be undone.`, { danger: true, confirmLabel: "Purge" });
+    if (!ok) return;
     setLoading(true);
     try {
       const res = await api.purgeOrphanedObjects();
@@ -29,28 +31,30 @@ export default function AdminS3CleanPage() {
   if (error) return <p className="error">{error}</p>;
 
   return (
-    <main className="admin-page">
+    <>
       <h2>S3 Cleanup</h2>
       <p className="admin-subtext">{objects.length} orphaned object(s) — pages whose chapter or series has been deleted.</p>
 
       {objects.length > 0 && (
         <>
-          <table className="admin-table">
-            <thead>
-              <tr>{["ID", "Key", "Bucket", "Chapter ID", "Page #"].map((h) => <th key={h}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {objects.map((o) => (
-                <tr key={o.id}>
-                  <td>{o.id}</td>
-                  <td className="mono">{o.key}</td>
-                  <td>{o.bucket}</td>
-                  <td>{o.chapter_id}</td>
-                  <td>{o.page_number}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead>
+                <tr>{["ID", "Key", "Bucket", "Chapter ID", "Page #"].map((h) => <th key={h}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {objects.map((o) => (
+                  <tr key={o.id}>
+                    <td>{o.id}</td>
+                    <td className="mono">{o.key}</td>
+                    <td>{o.bucket}</td>
+                    <td>{o.chapter_id}</td>
+                    <td>{o.page_number}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <button className="btn-outline" onClick={handlePurge} disabled={loading}
             style={{ color: "var(--danger)", borderColor: "var(--danger)", width: "auto" }}>
             {loading ? "Purging…" : `Purge ${objects.length} object(s)`}
@@ -69,6 +73,6 @@ export default function AdminS3CleanPage() {
           )}
         </div>
       )}
-    </main>
+    </>
   );
 }
