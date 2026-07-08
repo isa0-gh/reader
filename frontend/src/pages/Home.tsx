@@ -50,7 +50,6 @@ export default function Home() {
         placeholder="Search by title…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        style={{ marginBottom: "1rem", width: "100%", maxWidth: 320, padding: "0.5rem 0.75rem", border: "1px solid var(--border)", borderRadius: 4 }}
       />
 
       {loading ? (
@@ -64,7 +63,9 @@ export default function Home() {
             <div key={s.id} className="series-card" role="button" tabIndex={0}
               onClick={() => nav(`/series/${s.id}`)}
               onKeyDown={(e) => e.key === "Enter" && nav(`/series/${s.id}`)}>
-                <img src={s.cover_image ? `${cdn_url}/${s.cover_image.key}` : ""} alt={s.title} />
+                {s.cover_image
+                  ? <img src={`${cdn_url}/${s.cover_image.key}`} alt={s.title} />
+                  : <div className="cover-placeholder" aria-hidden="true" />}
                 <div className="card-info">
                   <div className="card-title">{s.title}</div>
                   <div className="card-status">{s.status}</div>
