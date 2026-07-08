@@ -20,9 +20,13 @@ func NewS3CleanHandler(db *gorm.DB, s3 *storage.S3Client) *S3CleanHandler {
 	return &S3CleanHandler{db: db, s3: s3}
 }
 
-// orphaned returns S3Objects whose chapter or parent series is soft-deleted or missing.
+// orphaned returns S3Objects whose chapter/parent series is soft-deleted or
+// missing, or whose owning series/user (for covers/avatars) is soft-deleted
+// or missing.
 func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
-	var objs []model.S3Object
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — the frontend expects an array to call .length on unconditionally.
+	objs := []model.S3Object{}
 
 	// 1. Pages orphaned by chapter/series deletion
 	var pages []model.S3Object
@@ -37,13 +41,19 @@ func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
 	}
 	objs = append(objs, pages...)
 
-	// 2. Covers orphaned by series deletion or just unreferenced
+	// 2. Covers/avatars orphaned by series/user deletion, or just unreferenced.
+	// Both cover images and avatars are S3Objects with chapter_id NULL, so they
+	// share this query — an avatar isn't a series cover, so without the users
+	// join every avatar in use would show up as "unreferenced by any series"
+	// and get purged.
 	var covers []model.S3Object
 	if err := h.db.Unscoped().
 		Table("s3_objects").
 		Joins("LEFT JOIN series ON series.cover_image_id = s3_objects.id").
+		Joins("LEFT JOIN users ON users.avatar_id = s3_objects.id").
 		Where("s3_objects.chapter_id IS NULL").
 		Where("series.deleted_at IS NOT NULL OR series.id IS NULL").
+		Where("users.deleted_at IS NOT NULL OR users.id IS NULL").
 		Find(&covers).Error; err != nil {
 		return nil, err
 	}
@@ -72,7 +82,7 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var deleted, failed []string
+	deleted, failed := []string{}, []string{}
 
 	for _, obj := range objs {
 		if err := h.s3.DeleteObject(r.Context(), obj.Bucket, obj.Key); err != nil {
@@ -80,9 +90,10 @@ func (h *S3CleanHandler) Purge(w http.ResponseWriter, r *http.Request) {
 			failed = append(failed, obj.Key)
 			continue
 		}
-		// If this was a cover image still referenced by a soft-deleted series,
-		// the fk_series_cover_image constraint (ON DELETE SET NULL) nulls out
-		// that reference automatically instead of blocking the delete.
+		// If this was a cover image or avatar still referenced by a soft-deleted
+		// series/user, the fk_series_cover_image / fk_users_avatar constraints
+		// (ON DELETE SET NULL) null out that reference automatically instead of
+		// blocking the delete.
 		if err := h.db.Unscoped().Delete(&obj).Error; err != nil {
 			log.Printf("s3clean: deleted s3://%s/%s but failed to remove DB row: %v", obj.Bucket, obj.Key, err)
 			failed = append(failed, obj.Key)
