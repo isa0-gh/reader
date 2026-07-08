@@ -61,7 +61,10 @@ func (r *userRepository) Delete(ctx context.Context, id uint) error {
 }
 
 func (r *userRepository) List(ctx context.Context, limit int, after, before uint) ([]model.User, error) {
-	var users []model.User
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — handler.List returns this straight to the frontend, which
+	// calls .length on it unconditionally.
+	users := []model.User{}
 	q := r.db.WithContext(ctx).Order("id asc").Limit(limit)
 	if after > 0 {
 		q = q.Where("id > ?", after)

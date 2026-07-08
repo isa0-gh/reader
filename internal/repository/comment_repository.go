@@ -36,7 +36,9 @@ func (r *commentRepository) GetByID(ctx context.Context, id uint) (*model.Commen
 }
 
 func (r *commentRepository) ListByChapter(ctx context.Context, chapterID uint, limit, offset int) ([]model.Comment, error) {
-	var list []model.Comment
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — the frontend reads res.items unconditionally.
+	list := []model.Comment{}
 	query := r.db.WithContext(ctx).Preload("User").Preload("User.Avatar").Where("chapter_id = ?", chapterID).Order("created_at asc")
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -56,7 +58,9 @@ func (r *commentRepository) CountByChapter(ctx context.Context, chapterID uint) 
 }
 
 func (r *commentRepository) ListByUser(ctx context.Context, userID uint, limit, offset int) ([]model.Comment, error) {
-	var list []model.Comment
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — the frontend reads res.items unconditionally.
+	list := []model.Comment{}
 	query := r.db.WithContext(ctx).Preload("Chapter").Where("user_id = ?", userID).Order("created_at desc")
 	if limit > 0 {
 		query = query.Limit(limit)

@@ -60,7 +60,9 @@ func (r *seriesRepository) Update(ctx context.Context, s *model.Series) error {
 }
 
 func (r *seriesRepository) List(ctx context.Context, limit, offset int, q string) ([]model.Series, error) {
-	var list []model.Series
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — the frontend reads res.items unconditionally.
+	list := []model.Series{}
 	query := r.db.WithContext(ctx).Preload("CoverImage").Order("created_at desc")
 	if q != "" {
 		query = query.Where("title ILIKE ?", "%"+q+"%")
