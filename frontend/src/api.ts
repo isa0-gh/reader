@@ -149,7 +149,7 @@ export interface Comment {
   id: number;
   chapter_id: number;
   user_id: number;
-  user?: { id: number; name: string };
+  user?: { id: number; name: string; comment_suspended_until?: string | null };
   body: string;
   created_at: string;
 }
