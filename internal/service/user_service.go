@@ -20,6 +20,10 @@ type UserService interface {
 	GetUser(ctx context.Context, id uint) (*model.User, error)
 	ListUsers(ctx context.Context, limit int, after, before uint) ([]model.User, error)
 	ChangePassword(ctx context.Context, id uint, currentPassword, newPassword string) error
+	// ChangeEmail requires the current password (email doubles as the login
+	// credential) and rotates JwtID like ChangePassword, so a changed email
+	// also logs out every existing session.
+	ChangeEmail(ctx context.Context, id uint, currentPassword, newEmail string) (*model.User, error)
 	UpdateRole(ctx context.Context, id uint, role model.Role) error
 	DeleteUser(ctx context.Context, id uint) error
 	SeedAdmin(ctx context.Context) error
@@ -27,6 +31,15 @@ type UserService interface {
 	// is one of the presets ("1h", "1d", "1y"), a custom Go duration string
 	// (e.g. "72h30m"), or "" / "none" to clear an existing suspension.
 	SuspendComments(ctx context.Context, id uint, duration string) (*model.User, error)
+	// UpdateProfile updates the caller's own display name and bio (self-service,
+	// like ChangePassword — no permission check, only ever acts on the caller's
+	// own account).
+	UpdateProfile(ctx context.Context, id uint, name, bio string) (*model.User, error)
+	SetAvatar(ctx context.Context, id uint, key, bucket string) (*model.User, error)
+	// ClearAvatar unsets the caller's avatar, back to the initial-letter
+	// placeholder. Leaves the old S3Object row/file in place, same as
+	// replacing a series cover — the admin S3 cleanup tool catches it.
+	ClearAvatar(ctx context.Context, id uint) (*model.User, error)
 }
 
 var commentSuspensionPresets = map[string]time.Duration{
@@ -135,6 +148,35 @@ func (s *userService) ChangePassword(ctx context.Context, id uint, currentPasswo
 	return s.repo.Update(ctx, user)
 }
 
+func (s *userService) ChangeEmail(ctx context.Context, id uint, currentPassword, newEmail string) (*model.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return nil, errors.New("current password is incorrect")
+	}
+
+	if newEmail == user.Email {
+		return user, nil
+	}
+	if existing, err := s.repo.GetByEmail(ctx, newEmail); err == nil && existing.ID != user.ID {
+		return nil, errors.New("email is already in use")
+	}
+
+	user.Email = newEmail
+	// Rotate JwtID so every existing session (including the one making this
+	// request) is invalidated, matching ChangePassword's behavior — email
+	// doubles as the login credential.
+	user.JwtID = uuid.New().String()
+
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func (s *userService) UpdateRole(ctx context.Context, id uint, role model.Role) error {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -168,6 +210,36 @@ func (s *userService) SuspendComments(ctx context.Context, id uint, duration str
 		user.CommentSuspendedUntil = &until
 	}
 
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *userService) UpdateProfile(ctx context.Context, id uint, name, bio string) (*model.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	user.Name = name
+	user.Bio = bio
+	if err := s.repo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *userService) SetAvatar(ctx context.Context, id uint, key, bucket string) (*model.User, error) {
+	return s.repo.SetAvatar(ctx, id, &model.S3Object{Key: key, Bucket: bucket})
+}
+
+func (s *userService) ClearAvatar(ctx context.Context, id uint) (*model.User, error) {
+	user, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	user.AvatarID = nil
+	user.Avatar = nil
 	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err
 	}
