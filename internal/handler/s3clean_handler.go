@@ -21,8 +21,8 @@ func NewS3CleanHandler(db *gorm.DB, s3 *storage.S3Client) *S3CleanHandler {
 }
 
 // orphaned returns S3Objects whose chapter/parent series is soft-deleted or
-// missing, or whose owning series/user (for covers/avatars) is soft-deleted
-// or missing.
+// missing, or whose owning series/user/background (for covers/avatars/site
+// wallpapers) is soft-deleted, hard-deleted, or missing.
 func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
 	// Initialized (not nil) so json.Marshal always encodes "[]", never
 	// "null" — the frontend expects an array to call .length on unconditionally.
@@ -41,19 +41,23 @@ func (h *S3CleanHandler) orphaned() ([]model.S3Object, error) {
 	}
 	objs = append(objs, pages...)
 
-	// 2. Covers/avatars orphaned by series/user deletion, or just unreferenced.
-	// Both cover images and avatars are S3Objects with chapter_id NULL, so they
-	// share this query — an avatar isn't a series cover, so without the users
-	// join every avatar in use would show up as "unreferenced by any series"
-	// and get purged.
+	// 2. Covers/avatars/backgrounds orphaned by series/user deletion, or just
+	// unreferenced. All three are S3Objects with chapter_id NULL, so they
+	// share this query — each new "S3Object with no chapter_id" use case
+	// (avatars, now backgrounds) needs its own join here, or it looks
+	// unreferenced by everything else and gets purged. Backgrounds have no
+	// soft-delete, so a plain "no matching row" check is enough — no
+	// deleted_at column to also check like series/users.
 	var covers []model.S3Object
 	if err := h.db.Unscoped().
 		Table("s3_objects").
 		Joins("LEFT JOIN series ON series.cover_image_id = s3_objects.id").
 		Joins("LEFT JOIN users ON users.avatar_id = s3_objects.id").
+		Joins("LEFT JOIN backgrounds ON backgrounds.image_id = s3_objects.id").
 		Where("s3_objects.chapter_id IS NULL").
 		Where("series.deleted_at IS NOT NULL OR series.id IS NULL").
 		Where("users.deleted_at IS NOT NULL OR users.id IS NULL").
+		Where("backgrounds.id IS NULL").
 		Find(&covers).Error; err != nil {
 		return nil, err
 	}
