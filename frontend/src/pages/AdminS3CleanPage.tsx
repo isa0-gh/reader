@@ -10,7 +10,7 @@ export default function AdminS3CleanPage() {
   const [error, setError] = useState("");
 
   async function load() {
-    try { setObjects(await api.listOrphanedObjects()); }
+    try { setObjects((await api.listOrphanedObjects()) ?? []); }
     catch (e: any) { setError(e.message); }
   }
 
