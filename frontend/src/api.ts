@@ -156,6 +156,14 @@ export const api = {
 
   updateFavoriteProgress: (seriesId: number, chapterId: number) =>
     request(`/favorites/${seriesId}/progress`, { method: "PATCH", body: JSON.stringify({ chapter_id: chapterId }) }),
+
+  listBackgrounds: () => request<Background[]>("/backgrounds"),
+
+  addBackground: (key: string, bucket: string) =>
+    request<Background>("/admin/backgrounds", { method: "POST", body: JSON.stringify({ key, bucket }) }),
+
+  deleteBackground: (id: number) =>
+    request(`/admin/backgrounds/${id}`, { method: "DELETE" }),
 };
 
 export async function uploadFile(file: File, prefix: string): Promise<{ key: string; bucket: string; public_url: string }> {
@@ -219,6 +227,13 @@ export interface Page {
   id: number;
   key: string;
   page_number: number;
+}
+
+export interface Background {
+  id: number;
+  image_id: number;
+  image: S3Object;
+  created_at: string;
 }
 
 export interface Favorite {
