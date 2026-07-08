@@ -3,6 +3,7 @@ import { AuthProvider } from "./AuthContext";
 import { ConfigProvider } from "./ConfigContext";
 import { ToastProvider } from "./ToastContext";
 import { ConfirmProvider } from "./ConfirmContext";
+import { FavoritesProvider } from "./FavoritesContext";
 import Nav from "./Nav";
 import Home from "./pages/Home";
 import SeriesPage from "./pages/SeriesPage";
@@ -22,21 +23,23 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <ConfirmProvider>
-            <Nav />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/series/:id" element={<SeriesPage />} />
-              <Route path="/series/:id/:chapterId" element={<ReaderPage />} />
-              <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="users" replace />} />
-                <Route path="users" element={<AdminUsersPage />} />
-                <Route path="s3" element={<AdminS3CleanPage />} />
-              </Route>
-            </Routes>
+            <FavoritesProvider>
+              <Nav />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/series/:id" element={<SeriesPage />} />
+                <Route path="/series/:id/:chapterId" element={<ReaderPage />} />
+                <Route path="/series/:id/:chapterId/edit" element={<ChapterEditPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="users" replace />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route path="s3" element={<AdminS3CleanPage />} />
+                </Route>
+              </Routes>
+            </FavoritesProvider>
           </ConfirmProvider>
         </ToastProvider>
       </AuthProvider>

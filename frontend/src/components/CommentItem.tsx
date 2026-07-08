@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Comment } from "../api";
 import Modal from "../Modal";
+import { useConfig } from "../ConfigContext";
 
 const CUSTOM_UNITS: [string, number][] = [
   ["Hours", 1],
@@ -17,12 +18,14 @@ export default function CommentItem({
   onDelete(id: number): void;
   onSuspend(userId: number, duration: string): void;
 }) {
+  const { cdn_url } = useConfig();
   const [open, setOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [amount, setAmount] = useState(3);
   const [unitHours, setUnitHours] = useState(24);
   const ref = useRef<HTMLDivElement>(null);
   const name = comment.user?.name ?? `User #${comment.user_id}`;
+  const avatar = comment.user?.avatar;
   const suspendedUntil = comment.user?.comment_suspended_until;
   const isSuspended = !!suspendedUntil && new Date(suspendedUntil) > new Date();
 
@@ -49,7 +52,9 @@ export default function CommentItem({
 
   return (
     <div className="comment">
-      <div className="comment-avatar" aria-hidden="true">{name.charAt(0).toUpperCase()}</div>
+      {avatar
+        ? <img src={`${cdn_url}/${avatar.key}`} alt="" className="comment-avatar" />
+        : <div className="comment-avatar comment-avatar--placeholder" aria-hidden="true">{name.charAt(0).toUpperCase()}</div>}
       <div className="comment-body">
         <div className="comment-header-row">
           <span className="comment-author">{name}</span>
