@@ -3,6 +3,7 @@ import "../admin.css";
 
 const TABS = [
   { to: "/admin/users", label: "Users" },
+  { to: "/admin/backgrounds", label: "Backgrounds" },
   { to: "/admin/s3", label: "S3 Cleanup" },
 ];
 

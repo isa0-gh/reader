@@ -44,6 +44,7 @@ var RolePermissions = map[Role][]string{
 		"comment:create",
 		"comment:delete",
 		"comment:suspend",
+		"background:manage",
 	},
 }
 

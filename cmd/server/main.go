@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("could not connect to database: %v", err)
 	}
 
-	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}, &model.Favorite{}} {
+	for _, m := range []any{&model.User{}, &model.Series{}, &model.Chapter{}, &model.S3Object{}, &model.Comment{}, &model.Favorite{}, &model.Background{}} {
 		if err := db.AutoMigrate(m); err != nil {
 			log.Fatalf("could not migrate database: %v", err)
 		}
@@ -82,6 +82,10 @@ func main() {
 	favoriteRepo := repository.NewFavoriteRepository(db)
 	favoriteSvc := service.NewFavoriteService(favoriteRepo)
 	favoriteHandler := handler.NewFavoriteHandler(favoriteSvc)
+
+	backgroundRepo := repository.NewBackgroundRepository(db)
+	backgroundSvc := service.NewBackgroundService(backgroundRepo)
+	backgroundHandler := handler.NewBackgroundHandler(backgroundSvc)
 
 	// Setup Router
 	r := chi.NewRouter()
@@ -174,6 +178,16 @@ func main() {
 			r.Use(appMiddleware.RequirePermission("user:list"))
 			r.Get("/orphaned", s3CleanHandler.List)
 			r.Delete("/orphaned", s3CleanHandler.Purge)
+		})
+
+		// Site backgrounds: public read (every visitor's page needs the
+		// wallpaper set), admin-only write (background:manage).
+		r.Get("/backgrounds", backgroundHandler.List)
+		r.Route("/admin/backgrounds", func(r chi.Router) {
+			r.Use(appMiddleware.JWTMiddleware(userRepo))
+			r.Use(appMiddleware.RequirePermission("background:manage"))
+			r.Post("/", backgroundHandler.Create)
+			r.Delete("/{id}", backgroundHandler.Delete)
 		})
 
 		// Upload (presign) — requires auth

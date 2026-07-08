@@ -256,10 +256,28 @@ Suspend or clear a user's commenting permission. Not gated behind admin's `user:
 ## Admin Tools _(Admin only)_
 
 ### GET /admin/s3/orphaned
-List S3 objects that are no longer referenced by active chapters, series (covers), or users (avatars).
+List S3 objects that are no longer referenced by active chapters, series (covers), users (avatars), or backgrounds (site wallpapers).
 
 ### DELETE /admin/s3/orphaned
 Permanently delete orphaned objects from S3 and database.
+
+### POST /admin/backgrounds
+Add a site wallpaper background, from a prior `POST /upload/presign` upload. Requires `background:manage`.
+
+**Body**
+```json
+{ "key": "backgrounds/123456789.png", "bucket": "my-bucket" }
+```
+
+### DELETE /admin/backgrounds/{id}
+Remove a site wallpaper background. Hard-deletes the row (no soft delete on this model) — the underlying S3 object becomes orphaned and is picked up by the S3 cleanup tool above.
+
+---
+
+## Backgrounds
+
+### GET /backgrounds
+List site wallpaper backgrounds, oldest first. Public — every visitor's page needs the wallpaper set to render the site background.
 
 ---
 
@@ -270,4 +288,4 @@ Permanently delete orphaned objects from S3 and database.
 | `reader`    | Default user | Post comments |
 | `uploader`  | Content creator | Create chapters, Manage own chapters, Post comments |
 | `moderator` | Content manager | Manage all series and chapters, Post/delete comments, Suspend commenting |
-| `admin`     | System admin | Full access including user management, Post/delete comments, Suspend commenting |
+| `admin`     | System admin | Full access including user management, Post/delete comments, Suspend commenting, Manage site backgrounds |

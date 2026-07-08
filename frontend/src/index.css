@@ -28,6 +28,14 @@
   --glass-border: rgba(255,255,255,0.55);
   --glass-highlight: rgba(255,255,255,0.5);
   --glass-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.04);
+
+  /* Wallpaper (SiteBackground): stays sharp, no blur — the photo is the
+     point. Contrast comes entirely from the scrim + a brightness/saturation
+     trim, tuned per color scheme since light mode needs it much heavier for
+     dark text to stay legible over an arbitrarily bright/busy photo. */
+  --wallpaper-filter: saturate(0.95) brightness(1.02);
+  --wallpaper-scrim-opacity: 0.55;
+  --wallpaper-scrim-color: var(--bg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,7 +57,23 @@
     --glass-border: rgba(255,255,255,0.10);
     --glass-highlight: rgba(255,255,255,0.07);
     --glass-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+    --wallpaper-filter: saturate(0.95) brightness(0.85);
+    --wallpaper-scrim-opacity: 0.4;
+    /* --surface (#161618) instead of the near-black --bg (#0c0c0e) — pure
+       black flattens the wallpaper into a muddy silhouette; the softer,
+       slightly-lifted tone lets color/glow read through while still
+       anchoring contrast. */
+    --wallpaper-scrim-color: var(--surface);
   }
+}
+
+/* Muted/secondary text is tuned for a flat --bg and reads as washed-out over
+   a photo — promote both a notch stronger while a wallpaper is active. Since
+   --muted/--fg-2 are custom properties, this cascades to every element using
+   them (.muted, card status text, timestamps, ...) with no per-selector work. */
+body.has-wallpaper {
+  --muted: var(--fg-2);
+  --fg-2: color-mix(in srgb, var(--fg) 85%, var(--fg-2) 15%);
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -76,6 +100,73 @@ body::before {
   background:
     radial-gradient(55% 45% at 12% 8%, color-mix(in srgb, var(--fg) 5%, transparent), transparent 60%),
     radial-gradient(45% 40% at 88% 92%, color-mix(in srgb, var(--muted) 14%, transparent), transparent 60%);
+}
+
+/* Admin-uploaded wallpaper(s) — same fixed/-1/pointer-events-none slot as the
+   mesh above, rendered by <SiteBackground> only once at least one wallpaper
+   exists. Multiple layers stack absolutely; JS toggles --active to crossfade. */
+.site-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.site-background-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: var(--wallpaper-filter);
+  opacity: 0;
+  transition: opacity 2.5s ease;
+}
+.site-background-layer--active { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .site-background-layer { transition: none; }
+}
+
+/* Scrim keeps text/glass contrast working regardless of the photo underneath.
+   --wallpaper-scrim-opacity is tuned per color scheme: light mode needs it
+   much heavier since dark text has to stay legible over an arbitrarily
+   bright photo, where dark mode's own dim base color already does most of
+   the work. */
+.site-background-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--wallpaper-scrim-color);
+  opacity: var(--wallpaper-scrim-opacity);
+}
+
+/* Sibling of .site-background, not a child — needs real pointer-events even
+   though the wallpaper layer behind it is pointer-events:none. No account
+   needed: this is a plain localStorage preference for any visitor. */
+.wallpaper-toggle {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 5;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  box-shadow: var(--glass-shadow);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: color var(--transition), transform var(--transition);
+}
+.wallpaper-toggle:hover { color: var(--fg); }
+.wallpaper-toggle:active { transform: scale(0.96); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .wallpaper-toggle { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
 .glass {

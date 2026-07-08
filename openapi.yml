@@ -101,6 +101,14 @@ components:
         created_at:            { type: string, format: date-time }
         updated_at:            { type: string, format: date-time }
 
+    Background:
+      type: object
+      properties:
+        id:         { type: integer }
+        image_id:   { type: integer }
+        image:      { $ref: "#/components/schemas/S3Object" }
+        created_at: { type: string, format: date-time }
+
     Error:
       type: object
       properties:
@@ -527,6 +535,62 @@ paths:
                 properties:
                   deleted: { type: array, items: { type: string } }
                   failed: { type: array, items: { type: string } }
+
+  /backgrounds:
+    get:
+      summary: List site wallpaper backgrounds
+      description: Public — every visitor's page needs the wallpaper set to render the site background, not just admins.
+      tags: [Backgrounds]
+      responses:
+        "200":
+          description: List of backgrounds, oldest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Background" }
+
+  /admin/backgrounds:
+    post:
+      summary: Add a site wallpaper background (Admin only)
+      description: Body is a key/bucket pair from a prior POST /upload/presign upload, same pattern as series cover images.
+      tags: [Backgrounds]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, bucket]
+              properties:
+                key:    { type: string }
+                bucket: { type: string }
+      responses:
+        "201":
+          description: Background created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Background" }
+        "400": { description: key and bucket are required }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — missing background:manage permission }
+
+  /admin/backgrounds/{id}:
+    delete:
+      summary: Remove a site wallpaper background (Admin only)
+      description: Deletes the Background row only (hard delete, no soft-delete on this model) — the S3 object it pointed at becomes orphaned and is picked up by the admin S3 cleanup tool.
+      tags: [Backgrounds]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Background removed }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden — missing background:manage permission }
 
   /upload/presign:
     post:
