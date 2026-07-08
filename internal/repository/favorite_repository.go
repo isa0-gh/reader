@@ -39,7 +39,9 @@ func (r *favoriteRepository) Delete(ctx context.Context, userID, seriesID uint) 
 }
 
 func (r *favoriteRepository) ListByUser(ctx context.Context, userID uint, limit, offset int) ([]model.Favorite, error) {
-	var list []model.Favorite
+	// Initialized (not nil) so json.Marshal always encodes "[]", never
+	// "null" — the frontend reads res.items unconditionally.
+	list := []model.Favorite{}
 	query := r.db.WithContext(ctx).
 		Preload("Series").Preload("Series.CoverImage").Preload("LastReadChapter").
 		Where("user_id = ?", userID).Order("updated_at desc")
