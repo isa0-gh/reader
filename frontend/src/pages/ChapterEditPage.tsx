@@ -1,5 +1,6 @@
 import { useEffect, useState, ChangeEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { PiArrowLeft, PiArrowUp, PiArrowDown, PiX } from "react-icons/pi";
 import { api, Chapter, Page, uploadFile } from "../api";
 import { useConfig } from "../ConfigContext";
 import { useConfirm } from "../ConfirmContext";
@@ -181,7 +182,7 @@ export default function ChapterEditPage() {
         <h1 className="page-title">Edit Ch. {chapter.number}</h1>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button className="btn-outline" onClick={() => nav(`/series/${seriesId}/${chapterId}`)}>View</button>
-          <button className="btn-outline" onClick={() => nav(`/series/${seriesId}`)}>← Back</button>
+          <button className="btn-outline" onClick={() => nav(`/series/${seriesId}`)}><PiArrowLeft /> Back</button>
         </div>
       </div>
 
@@ -211,9 +212,9 @@ export default function ChapterEditPage() {
             <img src={`${cdn_url}/${p.key}`} className="page-row-thumb" />
             <span className="page-row-name">{p.key.split("/").pop()}</span>
             <input type="number" min={1} value={p.page_number} onChange={e => setPageNum(i, e.target.value, false)} className="page-row-num" />
-            <button onClick={() => moveUp(i, false)} disabled={i === 0} className="page-row-btn">↑</button>
-            <button onClick={() => moveDown(i, false)} disabled={i === pages.length - 1} className="page-row-btn">↓</button>
-            <button onClick={() => deleteExisting(p)} className="page-row-btn page-row-btn--danger">✕</button>
+            <button onClick={() => moveUp(i, false)} disabled={i === 0} className="page-row-btn" aria-label="Move up"><PiArrowUp /></button>
+            <button onClick={() => moveDown(i, false)} disabled={i === pages.length - 1} className="page-row-btn" aria-label="Move down"><PiArrowDown /></button>
+            <button onClick={() => deleteExisting(p)} className="page-row-btn page-row-btn--danger" aria-label="Delete"><PiX /></button>
           </div>
         ))}
       </div>
@@ -227,9 +228,9 @@ export default function ChapterEditPage() {
               <img src={e.preview} className="page-row-thumb" />
               <span className="page-row-name">{e.file.name}</span>
               <input type="number" min={1} value={e.pageNumber} onChange={ev => setPageNum(i, ev.target.value, true)} className="page-row-num" />
-              <button onClick={() => moveUp(i, true)} disabled={i === 0} className="page-row-btn">↑</button>
-              <button onClick={() => moveDown(i, true)} disabled={i === newFiles.length - 1} className="page-row-btn">↓</button>
-              <button onClick={() => removeNew(i)} className="page-row-btn page-row-btn--danger">✕</button>
+              <button onClick={() => moveUp(i, true)} disabled={i === 0} className="page-row-btn" aria-label="Move up"><PiArrowUp /></button>
+              <button onClick={() => moveDown(i, true)} disabled={i === newFiles.length - 1} className="page-row-btn" aria-label="Move down"><PiArrowDown /></button>
+              <button onClick={() => removeNew(i)} className="page-row-btn page-row-btn--danger" aria-label="Remove"><PiX /></button>
             </div>
           ))}
         </div>

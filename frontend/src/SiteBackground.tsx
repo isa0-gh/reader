@@ -1,20 +1,21 @@
 import { useEffect, useState } from "react";
+import { PiImage, PiImageBroken } from "react-icons/pi";
 import { api, Background } from "./api";
 import { useConfig } from "./ConfigContext";
 
 const ROTATE_MS = 12000;
-const STORAGE_KEY = "wallpaper_disabled";
+const STORAGE_KEY = "wallpaper_enabled";
 
 // Mounted once at the app root, behind everything (fixed, pointer-events:none).
 // Renders nothing — falling back to index.css's plain gradient mesh — until
 // an admin has uploaded at least one wallpaper via the Backgrounds admin panel.
-// No account needed to turn it off: the on/off toggle is a plain localStorage
-// preference, available to every visitor.
+// Opt-in, not opt-out: defaults off until a visitor explicitly turns it on
+// (plain localStorage preference, no account needed).
 export default function SiteBackground() {
   const { cdn_url } = useConfig();
   const [backgrounds, setBackgrounds] = useState<Background[]>([]);
   const [active, setActive] = useState(0);
-  const [disabled, setDisabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
+  const [enabled, setEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
 
   useEffect(() => {
     api.listBackgrounds().then(setBackgrounds).catch(() => {});
@@ -24,21 +25,21 @@ export default function SiteBackground() {
   // washed-out over a photo; boost their contrast site-wide (CSS custom
   // properties cascade) only while a wallpaper is actually showing.
   useEffect(() => {
-    const showing = backgrounds.length > 0 && !disabled;
+    const showing = backgrounds.length > 0 && enabled;
     document.body.classList.toggle("has-wallpaper", showing);
     return () => document.body.classList.remove("has-wallpaper");
-  }, [backgrounds.length, disabled]);
+  }, [backgrounds.length, enabled]);
 
   useEffect(() => {
-    if (backgrounds.length < 2 || disabled) return;
+    if (backgrounds.length < 2 || !enabled) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = setInterval(() => setActive((i) => (i + 1) % backgrounds.length), ROTATE_MS);
     return () => clearInterval(id);
-  }, [backgrounds.length, disabled]);
+  }, [backgrounds.length, enabled]);
 
   function toggle() {
-    setDisabled((d) => {
-      const next = !d;
+    setEnabled((e) => {
+      const next = !e;
       localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
       return next;
     });
@@ -48,7 +49,7 @@ export default function SiteBackground() {
 
   return (
     <>
-      {!disabled && (
+      {enabled && (
         <div className="site-background" aria-hidden="true">
           {backgrounds.map((bg, i) => (
             <div
@@ -63,9 +64,10 @@ export default function SiteBackground() {
       <button
         className="wallpaper-toggle"
         onClick={toggle}
-        title={disabled ? "Turn background image on" : "Turn background image off"}
+        title={enabled ? "Turn background image off" : "Turn background image on"}
       >
-        {disabled ? "Wallpaper off" : "Wallpaper on"}
+        {enabled ? <PiImage /> : <PiImageBroken />}
+        {enabled ? "Wallpaper on" : "Wallpaper off"}
       </button>
     </>
   );

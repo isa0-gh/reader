@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PiTrash, PiCaretLeft, PiCaretRight } from "react-icons/pi";
 import { api, User } from "../api";
 import { useAuth } from "../AuthContext";
 import { useToast } from "../ToastContext";
@@ -84,7 +85,7 @@ export default function AdminUsersPage() {
                 <td>
                   <button className="btn-outline" style={{ color: "var(--danger)" }}
                     disabled={u.id === me?.id} onClick={() => handleDelete(u.id)}>
-                    Delete
+                    <PiTrash /> Delete
                   </button>
                 </td>
               </tr>
@@ -93,8 +94,8 @@ export default function AdminUsersPage() {
         </table>
       </div>
       <div className="admin-pagination">
-        <button className="btn-outline" onClick={prev} disabled={!history.length}>← Prev</button>
-        <button className="btn-outline" onClick={next} disabled={users.length < PAGE_SIZE}>Next →</button>
+        <button className="btn-outline" onClick={prev} disabled={!history.length}><PiCaretLeft /> Prev</button>
+        <button className="btn-outline" onClick={next} disabled={users.length < PAGE_SIZE}>Next <PiCaretRight /></button>
       </div>
     </>
   );

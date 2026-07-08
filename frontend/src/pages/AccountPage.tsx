@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { PiTrash, PiXCircle } from "react-icons/pi";
 import { api, uploadFile, Comment } from "../api";
 import { useAuth } from "../AuthContext";
 import { useConfig } from "../ConfigContext";
@@ -186,7 +187,7 @@ export default function AccountPage() {
               <p className="muted">{user.email}</p>
               {avatarSrc && (
                 <button type="button" className="btn-outline" style={{ marginTop: "0.5rem" }} onClick={handleRemovePhoto}>
-                  Remove photo
+                  <PiXCircle /> Remove photo
                 </button>
               )}
             </div>
@@ -225,7 +226,7 @@ export default function AccountPage() {
                       <div className="comment-author">{s.title}</div>
                       <div className="muted">{f.last_read_chapter ? `Continue: Ch. ${f.last_read_chapter.number}` : "Not started"}</div>
                     </div>
-                    <button className="btn-outline" onClick={() => handleRemoveFavorite(s.id)}>Remove</button>
+                    <button className="btn-outline" onClick={() => handleRemoveFavorite(s.id)}><PiXCircle /> Remove</button>
                   </div>
                 );
               })}
@@ -262,7 +263,7 @@ export default function AccountPage() {
                     <p className="comment-text">{c.body}</p>
                   </div>
                   <button className="btn-outline" style={{ color: "var(--danger)" }} onClick={() => handleDeleteComment(c.id)}>
-                    Delete
+                    <PiTrash /> Delete
                   </button>
                 </div>
               ))}

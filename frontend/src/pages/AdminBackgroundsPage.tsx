@@ -1,4 +1,5 @@
 import { useEffect, useState, ChangeEvent } from "react";
+import { PiTrash } from "react-icons/pi";
 import { api, uploadFile, Background } from "../api";
 import { useConfig } from "../ConfigContext";
 import { useToast } from "../ToastContext";
@@ -71,7 +72,7 @@ export default function AdminBackgroundsPage() {
             <div key={bg.id} className="background-tile">
               <img src={`${cdn_url}/${bg.image.key}`} alt="" />
               <button className="btn-outline" style={{ color: "var(--danger)" }} onClick={() => handleDelete(bg)}>
-                Remove
+                <PiTrash /> Remove
               </button>
             </div>
           ))}

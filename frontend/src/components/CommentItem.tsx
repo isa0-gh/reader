@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { PiDotsThree } from "react-icons/pi";
 import { Comment } from "../api";
 import Modal from "../Modal";
 import { useConfig } from "../ConfigContext";
@@ -72,7 +73,7 @@ export default function CommentItem({
             aria-expanded={open}
             aria-label="Comment actions"
           >
-            ⋯
+            <PiDotsThree />
           </button>
           {open && (
             <div className="account-dropdown" role="menu">

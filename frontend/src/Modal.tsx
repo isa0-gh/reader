@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from "react";
+import { PiX } from "react-icons/pi";
 
 export default function Modal({ title, onClose, children }: { title: string; onClose(): void; children: ReactNode }) {
   useEffect(() => {
@@ -14,7 +15,7 @@ export default function Modal({ title, onClose, children }: { title: string; onC
       <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span>{title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Close"><PiX /></button>
         </div>
         {children}
       </div>
